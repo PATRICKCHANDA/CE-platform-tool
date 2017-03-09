@@ -75,9 +75,38 @@ function loadGeometries(mymap) {
     // get the GeoJSON from the database
     $.getJSON(url_get_factory)
     .done(function (data) {
-        L.geoJSON(data.result).addTo(mymap);
+        L.geoJSON(data, {
+            onEachFeature: onEachFeature
+        }).addTo(mymap);
+
+
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load factories from DB.");
     })
+}
+
+// for each factory polygon, get its products
+function onEachFeature(feature, layer) {
+    if (feature.properties) {
+        layer.bindPopup(feature.id + ":" + feature.properties.name);
+    }
+
+    layer.on('click', function(e) {
+        // bind the feature to its products
+        $.getJSON(url_get_factory_products + this.feature.id)
+        .done(function (data) {
+            for (var i in data) {
+                console.log(data[i].properties)
+            }
+        })
+        .fail (function (status, err) {
+            console.log("Error: failed to load products from factory", feature.id);
+        })
+    });
+}
+
+//! handler of on the polygon click
+function onFeatureClick(feature) {
+    alert('click event: ' + feature.id)
 }

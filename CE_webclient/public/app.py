@@ -3,6 +3,7 @@ from services.load_data import DataLoader
 
 app = Flask(__name__)
 db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+factories = {}
 
 @app.route('/')
 def index():
@@ -14,12 +15,20 @@ def index():
 def get_factory():
     if request.method == 'GET':
         if db_loader:
-            factories = db_loader.get_factories()
-            print(factories)
-            return jsonify(result=factories)
+            factories_json_collection = db_loader.get_factories(factories)
+            print(factories_json_collection)
+            return jsonify(factories_json_collection)
         else:
             print("db_loader is NONE.")
 
+
+@app.route('/getFactoryProducts/<factory_id>')
+def get_factory_products(factory_id):
+    if db_loader:
+        products = db_loader.get_factory_products(factory_id)
+        return jsonify(products)
+    else:
+        print("db_loader is NONE.")
 
 if __name__ == '__main__':
     # db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
