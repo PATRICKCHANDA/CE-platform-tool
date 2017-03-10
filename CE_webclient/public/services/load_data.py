@@ -6,7 +6,7 @@ from services.reaction_formula import ReactionFormula
 
 try:
     from osgeo import osr, ogr, gdal
-except:
+except ImportError(osr, ogr, gdal):
     sys.exit('Error: cannot find GDAL/OGR modules')
 
 
@@ -85,8 +85,8 @@ class DataLoader:
             rt_chemicals = {}
             for feature in lyr:
                 feature_json = json.loads(feature.ExportToJson())
-                id = feature_json['id']
-                rt_chemicals[id] = Chemical(feature_json)
+                obj_id = feature_json['id']
+                rt_chemicals[obj_id] = Chemical(feature_json)
             # important: reset the reading
             lyr.ResetReading()
             return rt_chemicals
@@ -154,10 +154,12 @@ class DataLoader:
             lyr.ResetReading()
             return feature_collection
 
-    def get_factories_products(self, factories):
+    def get_factories_products(self, factories, reactions, chemicals):
         """
         read gaolanport.factory_reaction_product to get all the products information
         :param factories:
+        :param reactions: dictionary of reaction formula's
+        :param chemicals: dictionary of all chemicals
         :return:
         """
         sql = 'select b.*, c.name_en, c.name_cn from ' + DataLoader.lyr_factory + ' a, ' \
@@ -175,7 +177,7 @@ class DataLoader:
             for feature in lyr:
                 factory_id = feature.GetField('factory_id')
                 if factory_id in factories:
-                    factories[factory_id].add_product(feature)
+                    factories[factory_id].add_product(feature, reactions, chemicals)
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
@@ -204,7 +206,6 @@ class DataLoader:
             return factory_products
 
 
-
 if __name__ == "__main__":
     get_all_drivers()
     db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     test_factories = {}
     db_loader.get_factories(test_factories)
 
-    db_loader.get_factories_products(test_factories)
+    db_loader.get_factories_products(test_factories, all_reactions, all_chemicals)
     db_loader.get_factory_products(2)
     db_loader.close()
 

@@ -6,16 +6,19 @@ insert into public.chemical values(4, 'carbon dioxide', '二氧化碳', 44, 0,'CO2',
 insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'recycle or treatment cost in EUR');
 
 -- public.reaction_formula
-insert into public.reaction_formula values(1, 'ethylene oxide', '环氧乙烷', 'OPEX', 200, 20, 0.86);
+insert into public.reaction_formula values(1, 'ethylene oxide', '环氧乙烷', 'OPEX', 200, 20);
 
 -- public.reaction_reactant (should be checked by the application since the conversion value can be changed)
 -- or a database procedure
-insert into public.reaction_reactant values(1, 1, 1/0.86, 'moles', -1);
-insert into public.reaction_reactant values(2, 1, 1 * 0.5 + 1/0.86 * (1-0.86) * 3, 'moles', -1);
+insert into public.reaction_reactant values(1, 1, '1/c', 'moles', -1);
+insert into public.reaction_reactant values(2, 1, '1/c * c * 0.5 + 1/c * (1-c) * 3', 'moles', -1);
 
 
 -- gaolanport.factory_reaction_product
-insert into gaolanport.factory_reaction_product values(2,1,3, 181898, 340,24,20,1,1,NULL, 'T');
+insert into gaolanport.factory_reaction_product values(2,1,3, 181898, 340,24,20,1,1,NULL, 'T', 0.86);
 
 -- gaolanport.factory (via QGIS)
 insert into gaolanport.factory values(1, '', , '');
+
+-- change column type
+-- alter table public.reaction_reactant alter column quantity type text using cast(quantity as text);

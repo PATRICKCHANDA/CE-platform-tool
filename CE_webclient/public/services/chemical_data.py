@@ -10,7 +10,7 @@ class Chemical:
         self.density = tmp['density']
         self.symbol = tmp['symbol']
         self.unit = tmp['unit']
-        self.unit_cost = tmp['unit_cost']
+        self.unit_cost = tmp['unit_cost']   # cost per 'unit'
         self.unit_transport_cost = tmp['unit_transport_cost']
         self.description = tmp['description']
 
