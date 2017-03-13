@@ -1,79 +1,189 @@
 from .unit_conversion import UnitConversion
 
 
-class FactoryMaterial:
-    """
-    a factory material
-    """
-    def __init__(self, name, quantity, value):
-        if __debug__:
-            self.__name = name
+class ProcessComponent:
+    def __init__(self, chem_id, quantity, quantity_unit, name, value=0):
+        self.chemical_id = chem_id
+        self.name = name
         self.quantity = quantity
-        self.value = value  # < 0 means cost of buy, > 0 means product
+        self.quantity_unit = quantity_unit
+        self.annual_value = value # < 0 means cost of buy, > 0 means product
+
+    def component_json(self):
+        return {'name': self.name, 'quantity': self.quantity, 'unit':self.quantity_unit, 'annual_value': self.annual_value}
 
 
-class FactoryProduct:
-    def __init__(self, product_chem_id, product_info):
+class ProcessByProduct(ProcessComponent):
+    """
+    a process's byproduct
+    """
+    def __init__(self, chem_id, name, quantity, quantity_unit, value):
+        ProcessComponent.__init__(self, chem_id, quantity, quantity_unit, name, value)
+
+
+class ProcessMaterial(ProcessComponent):
+    """
+    a process's (reaction) material
+    """
+    def __init__(self, chem_id, name, quantity, quantity_unit, value):
+        ProcessComponent.__init__(self, chem_id, quantity, quantity_unit, name, value)
+
+
+class ProcessProduct(ProcessComponent):
+    def __init__(self, product_chem_id, quantity, unit, name):
         """
         initial the factory product and its reactant
-        :param product_info: OGRFeature
+        :param product_chem_id:
+        :param quantity:
+        :param unit:
+        :param name
         """
-        self.__product_chem_id = product_chem_id
-        self.__chem_product_name = product_info.GetField('name_en')
-        self.__chem_product_name_cn = product_info.GetField('name_cn')
-        self.__reaction_formula_id = product_info.GetField('reaction_formula_id')
-        self.quantity = product_info.GetField('desired_quantity')
-        self.quantity_unit = product_info.GetField('unit')
-        self.days_of_production = product_info.GetField('days_of_production')
-        self.hours_of_production = product_info.GetField('hours_of_production')
-        self.inlet_temperature = product_info.GetField('inlet_temperature')
-        self.inlet_pressure = product_info.GetField('inlet_pressure')
-        # this parameter indicates the reactants for this product may from other reactions
-        self.__level_reactions = product_info.GetField('level_reactions')
-        self.conversion = product_info.GetField('conversion')
-        self.value_product = 0
-        self.material = {}  # {chemical_id: FactoryReactant}
+        ProcessComponent.__init__(self, product_chem_id, quantity, unit, name)
+        self.moles_per_second = 1
 
-    def calculate_product_value(self, chemicals_info):
-        self.value_product = UnitConversion.convert(chemicals_info[self.__product_chem_id].unit_cost,
-                                                    chemicals_info[self.__product_chem_id].unit,
-                                                    self.quantity_unit,
-                                                    'QUALITY') * self.quantity
+    def calculate_product_value(self, chemical_info):
+        self.annual_value = UnitConversion.convert(chemical_info.unit_cost,
+                                                   chemical_info.unit,
+                                                   self.quantity_unit,
+                                                   'QUALITY') * self.quantity
 
-    def calculate_materials(self, reaction_formulas, chemicals_info):
+    def calculate_materials(self, material, conversion, production_time, a_reaction_formula, chemicals_info):
         """
         calculate the necessary materials(quantity, cost(value)) for this product
+        :param material: dictionary
+        :param conversion: conversion value for product
+        :param production_time: time of production (default: seconds)
+        :param a_reaction_formula: instance of class ReactionFormula
+        :param chemicals_info: dictionary of all chemicals
         :return:
         """
         # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
         # step 0. convert the product quantity from unit(here is T)/year to moles/s
-        moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
-                           / (chemicals_info[self.__product_chem_id].molar_mass * self.production_time)
+        self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
+                           / (chemicals_info[self.chemical_id].molar_mass * production_time)
         # step 1. get the reactants info from the reaction_formula
-        if self.__reaction_formula_id in reaction_formulas:
-            for chem_id, reactant in reaction_formulas[self.__reaction_formula_id].reactants.items():
+        for chem_id, reactant in a_reaction_formula.reactants.items():
+            c = conversion
+            formula = reactant.quantity_ratio
+            # calculate the moles/s for the reactant using the ratio formula from database
+            moles_reactant = eval(formula) * self.moles_per_second
+            # convert moles/s to unit/year
+            annual_quantity = UnitConversion.convert(chemicals_info[chem_id].molar_mass
+                                                     * moles_reactant * production_time,
+                                                     'g',
+                                                     self.quantity_unit,
+                                                     'QUALITY')
+            # convert the unit_cost in chemical into the cost of the unit of the product * quantity
+            annual_cost = UnitConversion.convert(chemicals_info[chem_id].unit_cost,
+                                                 chemicals_info[chem_id].unit,
+                                                 self.quantity_unit, 'QUALITY') * annual_quantity
+            # add into material container
+            material[chem_id] = ProcessMaterial(chem_id, chemicals_info[chem_id].name, annual_quantity, self.quantity_unit, -annual_cost)
+
+
+class FactoryProcess:
+    """
+    represent a FactoryProcess, it contains the process's products, materials, by-products, utilities-use,
+    waste treatment
+    """
+    def __init__(self, **kwargs):
+        if __debug__:
+            self.rf_name = kwargs['rf_name']
+        self.reaction_formula_id = kwargs['rf_id']
+        self.days_of_production = kwargs['DOP']
+        self.hours_of_production = kwargs['HOP']
+        self.inlet_temperature = kwargs['inlet_T']
+        self.inlet_pressure = kwargs['inlet_P']
+        # this parameter indicates the reactants for this product may from other reactions
+        self.__level_reactions = kwargs['level_R']
+        self.conversion = kwargs['conversion']
+        self.__products = dict()    # contains ProcessProduct per reaction_formula
+        self.__byproducts = {}      # {chemical_id: ProcessByProduct}
+        self.__material = {}        # {chemical_id: ProcessMaterial}
+        self.__utility = {}
+        # indicate the material is already added, if true, when the next product added for this process, we do not need
+        # to calculate the material again!
+        self.__material_added = False
+
+    def add_product(self, product_chemical_id, quantity, unit, rf_info, all_chem_info):
+        """
+        create ProcessProduct, which contains the desired product, byproducts, material information
+        :param product_chemical_id:
+        :param quantity:
+        :param unit:
+        :param rf_info: a reaction_formula instance
+        :param all_chem_info: dictionary of all chemical
+        :return:
+        """
+        # add the desired product of this reaction
+        a_product = ProcessProduct(product_chemical_id,
+                                   quantity,
+                                   unit,
+                                   all_chem_info[product_chemical_id].name
+                                   )
+        a_product.calculate_product_value(all_chem_info[product_chemical_id])
+        if not self.__material_added:
+            # get the by-products of this reaction formula
+            a_product.calculate_materials(self.__material,
+                                          self.conversion,
+                                          self.production_time,
+                                          rf_info,
+                                          all_chem_info
+                                          )
+            # set material is added
+            self.__material_added = True
+        self.__products[product_chemical_id] = a_product
+
+    def add_byproducts(self, all_rf_info, all_chem_info):
+        """
+        add byproducts
+        :param all_rf_info:
+        :param all_chem_info:
+        :return: list of byproducts name
+        """
+        a_reaction_formula = all_rf_info[self.reaction_formula_id]
+        # step 0. get all the products info from the reaction_formula, the reaction_product with quantity is '1' moles
+        # is the reference product, since the quantity of all other products is based on this
+        a_product = None
+        for chem_id, rf_product in a_reaction_formula.products.items():
+            if rf_product.quantity == '1' and chem_id in self.__products:
+                # use this product as reference product, in the database we have made sure this is one of the desired
+                # product with quantity as 1
+                a_product = self.__products[chem_id]
+                break
+
+        # step 1. take one product from this FactoryProcess(reaction formula), if not a product, then it is a
+        # byproduct
+        byproduct_names = []
+        for chem_id, rf_product in a_reaction_formula.products.items():
+            # chem_id not in the products, then consider it as byproduct
+            if chem_id not in self.__products:
                 c = self.conversion
-                formula = reactant.quantity_ratio
                 # calculate the moles/s for the reactant using the ratio formula from database
-                moles_reactant = eval(formula) * moles_per_second
+                formula = rf_product.quantity
+                moles_byproduct = eval(formula) * a_product.moles_per_second
                 # convert moles/s to unit/year
-                annual_quantity = UnitConversion.convert(chemicals_info[chem_id].molar_mass
-                                                         * moles_reactant * self.production_time,
+                annual_quantity = UnitConversion.convert(all_chem_info[chem_id].molar_mass
+                                                         * moles_byproduct * self.production_time,
                                                          'g',
-                                                         self.quantity_unit,
+                                                         a_product.quantity_unit,
                                                          'QUALITY')
                 # convert the unit_cost in chemical into the cost of the unit of the product * quantity
-                annual_cost = UnitConversion.convert(chemicals_info[chem_id].unit_cost,
-                                                     chemicals_info[chem_id].unit,
-                                                     self.quantity_unit, 'QUALITY') * annual_quantity
-                # add into material container
-                self.material[chem_id] = FactoryMaterial(chemicals_info[chem_id].name, annual_quantity, -annual_cost)
-        else:
-            print("[ERROR]: No reaction formula is found for ", self.__reaction_formula_id)
+                annual_cost = UnitConversion.convert(all_chem_info[chem_id].unit_cost,
+                                                     all_chem_info[chem_id].unit,
+                                                     a_product.quantity_unit, 'QUALITY') * annual_quantity
+                self.__byproducts[chem_id] = ProcessByProduct(chem_id,
+                                                              all_chem_info[chem_id].name,
+                                                              annual_quantity,
+                                                              a_product.quantity_unit,
+                                                              -annual_cost
+                                                              )
+                byproduct_names.append(all_chem_info[chem_id].name)
+        return byproduct_names
 
     @property
-    def product_name(self):
-        return self.__chem_product_name_cn + "(" + self.__chem_product_name + ")"
+    def products(self):
+        return self.__products
 
     @property
     def production_time(self):
@@ -82,14 +192,19 @@ class FactoryProduct:
 
     @property
     def material_cost(self):
-        rt_value = 0
-        for v in self.material.values():
-            rt_value += v.value
-        return abs(rt_value)
+        return abs(sum(v.annual_value for v in self.__material.values()))
+
+    @property
+    def byproducts_cost(self):
+        return abs(sum(v.annual_value for v in self.__byproducts.values()))
+
+    @property
+    def products_value(self):
+        return sum(p.annual_value for p in self.__products.values())
 
     @property
     def revenue_per_year(self):
-        return self.value_product - self.material_cost
+        return self.products_value - self.material_cost - self.byproducts_cost
 
 
 class Factory:
@@ -100,26 +215,53 @@ class Factory:
         """
         :param info: dictionary format(json)
         """
+        # self.__factory_json = info  # all factory information in dictionary
         self.__id = info["id"]
         self.__name = info['properties']['name']
         self.__category = info['properties']['category']
         self.__geometry = info['geometry']
-        self.__products = {}    # contains FactoryProduct
+        # per product line represent 1 reaction_formula
+        self.__product_lines = {}
 
-    def add_product(self, product_info, reaction_formulas, chemicals_info):
+    def add_product_line(self, factory_reaction_info, rf_id, reaction_formulas_info, chemicals_info):
         """
-        :param product_info: OGRFeature
-        :param reaction_formulas: dictionary of all reaction formula's
+        for each unique reaction formula, create a FactoryProcess
+        :param factory_reaction_info: OGRFeature
+        :param rf_id: key for reaction_formula_info dictionary
+        :param reaction_formulas_info: dictionary of all reaction formula's
         :param chemicals_info: dictionary of all chemicals
         :return:
         """
-        product_chem_id = product_info.GetField('desired_chemical_id')
-        if product_chem_id in chemicals_info:
-            self.__products[product_chem_id] = FactoryProduct(product_chem_id, product_info)
-            self.__products[product_chem_id].calculate_product_value(chemicals_info)
-            self.__products[product_chem_id].calculate_materials(reaction_formulas, chemicals_info)
-        else:
-            print("[ERROR]: Unknown product. Please check the public.chemical table")
+        product_chem_id = factory_reaction_info.GetField('desired_chemical_id')
+        chem_name = factory_reaction_info.GetField('name_en')
+        chem_name_cn = factory_reaction_info.GetField('name_cn')
+        quantity = factory_reaction_info.GetField('desired_quantity')
+        quantity_unit = factory_reaction_info.GetField('unit')
+
+        # per reaction formula may have more than 1 products (although the chance is small?), in this case, all the
+        # products share the same material
+        if rf_id not in self.__product_lines:
+            # setup the FactoryProcess with basic process information
+            self.__product_lines[rf_id] = FactoryProcess(rf_name=reaction_formulas_info[rf_id].name,
+                                                         rf_id=rf_id,
+                                                         DOP=factory_reaction_info.GetField('days_of_production'),
+                                                         HOP=factory_reaction_info.GetField('hours_of_production'),
+                                                         inlet_T=factory_reaction_info.GetField('inlet_temperature'),
+                                                         inlet_P=factory_reaction_info.GetField('inlet_pressure'),
+                                                         level_R=factory_reaction_info.GetField('level_reactions'),
+                                                         conversion=factory_reaction_info.GetField('conversion')
+                                                         )
+        # add the target product
+        self.__product_lines[rf_id].add_product(product_chem_id,
+                                                quantity,
+                                                quantity_unit,
+                                                reaction_formulas_info[rf_id],
+                                                chemicals_info
+                                                )
+
+    @property
+    def factory_product_lines(self):
+        return self.__product_lines
 
     @property
     def factory_id(self):
@@ -128,5 +270,13 @@ class Factory:
     @property
     def factory_name(self):
         return self.__name
+
+    @property
+    def factory_json(self):
+        return {'type': 'Feature',
+                'geometry': self.__geometry,
+                'id': self.factory_id,
+                'properties': {'name': self.factory_name, 'category':self.__category}
+                }
 
 

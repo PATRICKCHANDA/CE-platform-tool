@@ -37,6 +37,7 @@ class DataLoader:
     lyr_chemical = 'public.chemical'
     lyr_reaction_formula = 'public.reaction_formula'
     lyr_reaction_reactant = 'public.reaction_reactant'
+    lyr_reaction_product = 'public.reaction_product'
 
     def __init__(self, db_server, db_name, db_user, db_pwd):
         """
@@ -71,7 +72,7 @@ class DataLoader:
     def get_all_chemicals(self):
         """
         read the public.chemical table to get all the chemical information and save into a dictionary
-        :return:
+        :return: {id: Chemical instance}
         """
         lyr = self.conn.GetLayer(DataLoader.lyr_chemical)
         if lyr is None:
@@ -91,14 +92,13 @@ class DataLoader:
             lyr.ResetReading()
             return rt_chemicals
 
-    def get_all_reaction_formulas(self):
+    def __get_reaction_formula_components(self, table_name, is_product, rt_reaction_formulas):
         """
-        read public.reaction_formula & public.reaction_reactant
-        :return:
+        read public.reaction_formula & public.reaction_reactant or public.reaction_product
         """
-        sql = 'select a.*, b.* from ' + DataLoader.lyr_reaction_formula + ' a,' \
-              + DataLoader.lyr_reaction_reactant + ' b ' \
-              + 'where a.object_id = b.reaction_formula_id'
+        sql = 'SELECT a.*, b.* from ' + DataLoader.lyr_reaction_formula + ' a,' \
+              + table_name + ' b ' \
+              + 'WHERE a.object_id = b.reaction_formula_id'
         lyr = self.conn.ExecuteSQL(sql)
         if lyr is None:
             print("[ERROR SQL]: ", sql, self.__db_name, "@", self.__db_server)
@@ -109,23 +109,32 @@ class DataLoader:
                 for i in range(lyr_defn.GetFieldCount()):
                     print(lyr_defn.GetFieldDefn(i).GetName())
 
-            rt_reaction_formulas = {}
             for feature in lyr:
                 formula_id = feature.GetField('object_id')
+                # create ReactionFormula if not exists in the container, otherwise updating the ReactionFormula
                 if formula_id not in rt_reaction_formulas:
-                    rt_reaction_formulas[formula_id] = ReactionFormula(feature)
+                    rt_reaction_formulas[formula_id] = ReactionFormula(feature, is_product)
                 else:
-                    rt_reaction_formulas[formula_id].add_reactant(feature)
-
+                    rt_reaction_formulas[formula_id].add_reaction_component(feature, is_product)
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
-            return rt_reaction_formulas
 
-    def get_factories(self, rt_factories):
+    def get_all_reaction_formulas(self):
+        """
+        get the reaction formula conditions, products and reactants
+        :return: {id : ReactionFormula instance}
+        """
+        rt_reaction_formulas = dict()
+        # add the reactants per reaction formula
+        self.__get_reaction_formula_components(DataLoader.lyr_reaction_reactant, False, rt_reaction_formulas)
+        # add the products per reaction formula
+        self.__get_reaction_formula_components(DataLoader.lyr_reaction_product, True, rt_reaction_formulas)
+        return rt_reaction_formulas
+
+    def get_factories(self):
         """
         read gaolanport.factory table to get factory information including its geometry
-        :param factories:
         :return: all factories information in dictionary format (json)
         """
         lyr = self.conn.GetLayer(DataLoader.lyr_factory)
@@ -134,25 +143,20 @@ class DataLoader:
             return None
         else:
             # print(lyr)
+            rt_factories = dict()
             feature_count = lyr.GetFeatureCount()
             print("# of factories: ", feature_count)
-
             # lyr_defn = lyr.GetLayerDefn()
             # for i in range(lyr_defn.GetFieldCount()):
             #     print(lyr_defn.GetFieldDefn(i).GetName())
-
-            feature_collection = {"type": "FeatureCollection", "features": []}
             for feature in lyr:
                 feature_json = json.loads(feature.ExportToJson())
-                feature_collection["features"].append(feature_json)
-
                 # get the id and name, and save them in a dictionary
-                id = feature_json['id']
-                rt_factories[id] = Factory(feature_json)
-
+                obj_id = feature_json['id']
+                rt_factories[obj_id] = Factory(feature_json)
             # important: reset the reading
             lyr.ResetReading()
-            return feature_collection
+            return rt_factories
 
     def get_factories_products(self, factories, reactions, chemicals):
         """
@@ -176,11 +180,22 @@ class DataLoader:
                     print(lyr_defn.GetFieldDefn(i).GetName())
             for feature in lyr:
                 factory_id = feature.GetField('factory_id')
+                rf_id = feature.GetField('reaction_formula_id')
+                # check
+                if rf_id not in reactions:
+                    print("[ERROR]: No reaction formula is found for ", rf_id)
                 if factory_id in factories:
-                    factories[factory_id].add_product(feature, reactions, chemicals)
+                    factories[factory_id].add_product_line(feature, rf_id, reactions, chemicals)
+                else:
+                    print('[ERROR]: Unknown factory id in table', DataLoader.lyr_factory_reaction_product)
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
+            # add the factory byproducts of each product line
+            for factory in factories.values():
+                for rf_id, product_line in factory.factory_product_lines.items():
+                    list_byproducts = product_line.add_byproducts(reactions, chemicals)
+                    print(list_byproducts, " byproducts are added for ", reactions[rf_id].name, ' for factory', factory.factory_name)
 
     # Deprecated
     def get_factory_products(self, factory_id):
@@ -211,10 +226,9 @@ if __name__ == "__main__":
     db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     all_reactions = db_loader.get_all_reaction_formulas()
-
-    test_factories = {}
-    db_loader.get_factories(test_factories)
-
+    # get factories
+    test_factories = db_loader.get_factories()
+    # get products of all factories
     db_loader.get_factories_products(test_factories, all_reactions, all_chemicals)
     db_loader.get_factory_products(2)
     db_loader.close()

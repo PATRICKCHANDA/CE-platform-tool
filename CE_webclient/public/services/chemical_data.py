@@ -1,8 +1,11 @@
 class Chemical:
     """
-    public.chemical
+    information from public.chemical table
     """
     def __init__(self, info):
+        """
+        :param info: dictionary (json format)
+        """
         tmp = info['properties']
         self.__name_cn = tmp['name_cn']
         self.__name_en = tmp['name_en']

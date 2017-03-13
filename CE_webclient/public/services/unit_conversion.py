@@ -26,23 +26,23 @@ class UnitConversion:
     LinearConversionTable[TIME]["years"] = 365.25 * 24 * 60 * 60
 
     @classmethod
-    def convert(cls, value, src_unit, dst_unit, quantity):
+    def convert(cls, value, src_unit, dst_unit, category):
         """
         unit conversion on quality
         :param value: float
         :param src_unit: str
         :param dst_unit: str
-        :param quantity: str
+        :param category: str
         :return: converted value in dst_unit
         """
         # make case insensitive
         src_unit = src_unit.lower().strip()
         dst_unit = dst_unit.lower().strip()
-        quantity = quantity.upper()
+        category = category.upper()
 
-        if src_unit in cls.LinearConversionTable[quantity] \
-                and dst_unit in cls.LinearConversionTable[quantity]:
-            return value * cls.LinearConversionTable[quantity][src_unit] / \
-                   cls.LinearConversionTable[quantity][dst_unit]
+        if src_unit in cls.LinearConversionTable[category] \
+                and dst_unit in cls.LinearConversionTable[category]:
+            return value * cls.LinearConversionTable[category][src_unit] / \
+                   cls.LinearConversionTable[category][dst_unit]
         else:
             return float('NaN')

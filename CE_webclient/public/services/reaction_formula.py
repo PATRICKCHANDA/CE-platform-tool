@@ -1,14 +1,30 @@
-class Reactant:
+class RFComponent:
     def __init__(self, info):
         if __debug__:
             self.chemical_id = info.GetField('chemical_id')
         self.reaction_formula_id = info.GetField('reaction_formula_id')
-        # it is a formula to calculate # of moles in order to product 1 moles product
-        self.quantity_ratio = info.GetField('quantity')
-        # default should be moles
         self.unit = info.GetField('unit')
         if self.unit != 'moles':
             print("[WARNING]: unit in reaction_reactant table should be moles. Further calculation will use moles!")
+
+
+class RFProduct(RFComponent):
+    """
+    represent reaction formula product
+    """
+    def __init__(self, info):
+        RFComponent.__init__(self, info)
+        self.quantity = info.GetField('quantity')
+
+
+class RFReactant(RFComponent):
+    """
+    represent reaction formula reactant
+    """
+    def __init__(self, info):
+        RFComponent.__init__(self, info)
+        # it is a formula to calculate # of moles in order to product 1 moles product
+        self.quantity_ratio = info.GetField('quantity')
         self.__prev_reaction_formula_id = info.GetField('prev_reaction_formula_id')
 
 
@@ -16,22 +32,25 @@ class ReactionFormula:
     """
     represent the reaction formula: reaction conditions, conversion, and its reactant(s)
     """
-    def __init__(self, info):
-        self.__name_en = info.GetField('name_en')
-        self.__name_cn = info.GetField('name_cn')
+    def __init__(self, info, is_product):
+        self.name = info.GetField('description')
         self.temperature = info.GetField('temperature')
         self.pressure = info.GetField('pressure')
         self.__reactants = {}
-        self.add_reactant(info)
-
-    @property
-    def name(self):
-        return self.__name_cn + "(" + self.__name_en + ")"
+        self.__products = {}
+        self.add_reaction_component(info, is_product)
 
     @property
     def reactants(self):
         return self.__reactants
 
-    def add_reactant(self, info):
+    @property
+    def products(self):
+        return self.__products
+
+    def add_reaction_component(self, info, is_product):
         chemical_id = info.GetField('chemical_id')
-        self.__reactants[chemical_id] = Reactant(info)
+        if is_product:
+            self.__products[chemical_id] = RFProduct(info)
+        else:
+            self.__reactants[chemical_id] = RFReactant(info)

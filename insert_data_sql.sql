@@ -6,7 +6,12 @@ insert into public.chemical values(4, 'carbon dioxide', '二氧化碳', 44, 0,'CO2',
 insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'recycle or treatment cost in EUR');
 
 -- public.reaction_formula
-insert into public.reaction_formula values(1, 'ethylene oxide', '环氧乙烷', 'OPEX', 200, 20);
+insert into public.reaction_formula values(1, 'OPEX 环氧乙烷', 200, 20);
+
+-- public.reaction_product, the formula for quantity is based on the excel sheet
+insert into public.reaction_product values(3, 1, 1, 'moles');
+insert into public.reaction_product values(4, 1, '2*(1-c)/c', 'moles');
+insert into public.reaction_product values(5, 1, '2*(1-c)/c', 'moles');
 
 -- public.reaction_reactant (should be checked by the application since the conversion value can be changed)
 -- or a database procedure
