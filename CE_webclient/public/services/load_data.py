@@ -195,7 +195,7 @@ class DataLoader:
             for factory in factories.values():
                 for rf_id, product_line in factory.factory_product_lines.items():
                     list_byproducts = product_line.add_byproducts(reactions, chemicals)
-                    print(list_byproducts, " byproducts are added for ", reactions[rf_id].name, ' for factory', factory.factory_name)
+                    print(list_byproducts, " byproducts are added for ", reactions[rf_id].name, ' for ', factory.factory_name)
 
     # Deprecated
     def get_factory_products(self, factory_id):

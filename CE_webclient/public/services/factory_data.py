@@ -2,6 +2,9 @@ from .unit_conversion import UnitConversion
 
 
 class ProcessComponent:
+    """
+    base class for Process-Product/ByProduct/Material
+    """
     def __init__(self, chem_id, quantity, quantity_unit, name, value=0):
         self.chemical_id = chem_id
         self.name = name
@@ -10,7 +13,11 @@ class ProcessComponent:
         self.annual_value = value # < 0 means cost of buy, > 0 means product
 
     def component_json(self):
-        return {'name': self.name, 'quantity': self.quantity, 'unit':self.quantity_unit, 'annual_value': self.annual_value}
+        return {'name': self.name,
+                'quantity': self.quantity,
+                'unit': self.quantity_unit,
+                'annual_value': self.annual_value
+                }
 
 
 class ProcessByProduct(ProcessComponent):
@@ -30,9 +37,12 @@ class ProcessMaterial(ProcessComponent):
 
 
 class ProcessProduct(ProcessComponent):
+    """
+    a process's product
+    """
     def __init__(self, product_chem_id, quantity, unit, name):
         """
-        initial the factory product and its reactant
+        initial the factory product
         :param product_chem_id:
         :param quantity:
         :param unit:
@@ -87,8 +97,7 @@ class FactoryProcess:
     waste treatment
     """
     def __init__(self, **kwargs):
-        if __debug__:
-            self.rf_name = kwargs['rf_name']
+        self.rf_name = kwargs['rf_name']
         self.reaction_formula_id = kwargs['rf_id']
         self.days_of_production = kwargs['DOP']
         self.hours_of_production = kwargs['HOP']
@@ -192,19 +201,48 @@ class FactoryProcess:
 
     @property
     def material_cost(self):
+        """
+        :return: cost of all material of the process
+        """
         return abs(sum(v.annual_value for v in self.__material.values()))
 
     @property
     def byproducts_cost(self):
+        """
+        :return: cost all byproducts of the process
+        """
         return abs(sum(v.annual_value for v in self.__byproducts.values()))
 
     @property
     def products_value(self):
+        """
+        :return: value of all products of the process
+        """
         return sum(p.annual_value for p in self.__products.values())
 
     @property
     def revenue_per_year(self):
+        """
+        a product line revenue: products - material - byproducts - ...
+        :return:
+        """
         return self.products_value - self.material_cost - self.byproducts_cost
+
+    def factory_process_json(self):
+        """
+        :return: dictionary of factory process information
+        """
+        return {'rf_name': self.rf_name,
+                'DOP': self.days_of_production,
+                'HOP': self.hours_of_production,
+                'inlet_T': self.inlet_temperature,
+                'inlet_P': self.inlet_pressure,
+                'conversion': self.conversion,
+                'products': [p.component_json for p in self.__products.values()],
+                'by-products': [p.component_json for p in self.__byproducts.values()],
+                'material': [p.component_json for p in self.__material.values()],
+                'process_annual_revenue': self.revenue_per_year
+                }
 
 
 class Factory:
@@ -276,7 +314,9 @@ class Factory:
         return {'type': 'Feature',
                 'geometry': self.__geometry,
                 'id': self.factory_id,
-                'properties': {'name': self.factory_name, 'category':self.__category}
+                'properties': {'name': self.factory_name,
+                               'category': self.__category
+                               }
                 }
 
 

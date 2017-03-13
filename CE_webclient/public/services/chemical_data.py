@@ -15,7 +15,7 @@ class Chemical:
         self.unit = tmp['unit']
         self.unit_cost = tmp['unit_cost']   # cost per 'unit'
         self.unit_transport_cost = tmp['unit_transport_cost']
-        self.description = tmp['description']
+        self.currency = tmp['currency']
 
     @property
     def name(self):
