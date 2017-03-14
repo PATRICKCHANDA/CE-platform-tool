@@ -106,6 +106,7 @@ class FactoryProcess:
         # this parameter indicates the reactants for this product may from other reactions
         self.__level_reactions = kwargs['level_R']
         self.conversion = kwargs['conversion']
+        self.percent_heat_removed_by_cooling_tower = kwargs['perc_heat_removed']
         self.__products = dict()    # contains ProcessProduct per reaction_formula
         self.__byproducts = {}      # {chemical_id: ProcessByProduct}
         self.__material = {}        # {chemical_id: ProcessMaterial}
@@ -287,7 +288,8 @@ class Factory:
                                                          inlet_T=factory_reaction_info.GetField('inlet_temperature'),
                                                          inlet_P=factory_reaction_info.GetField('inlet_pressure'),
                                                          level_R=factory_reaction_info.GetField('level_reactions'),
-                                                         conversion=factory_reaction_info.GetField('conversion')
+                                                         conversion=factory_reaction_info.GetField('conversion'),
+                                                         perc_heat_removed=factory_reaction_info.GetField('percent_heat_removed')
                                                          )
         # add the target product
         self.__product_lines[rf_id].add_product(product_chem_id,

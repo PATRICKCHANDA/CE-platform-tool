@@ -36,6 +36,7 @@ class ReactionFormula:
         self.name = info.GetField('description')
         self.temperature = info.GetField('temperature')
         self.pressure = info.GetField('pressure')
+        self.heat_reaction_formula = info.GetField('heat_reaction')
         self.__reactants = {}
         self.__products = {}
         self.add_reaction_component(info, is_product)

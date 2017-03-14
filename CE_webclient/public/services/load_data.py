@@ -2,6 +2,8 @@ import sys
 import json
 from services.factory_data import Factory
 from services.chemical_data import Chemical
+from services.emission_data import EmissionData
+from services.utility_type import UtilityType
 from services.reaction_formula import ReactionFormula
 
 try:
@@ -38,6 +40,8 @@ class DataLoader:
     lyr_reaction_formula = 'public.reaction_formula'
     lyr_reaction_reactant = 'public.reaction_reactant'
     lyr_reaction_product = 'public.reaction_product'
+    lyr_utility_type = "gaolanport.utility_type"
+    lyr_emission_data = "public.emission_data"
 
     def __init__(self, db_server, db_name, db_user, db_pwd):
         """
@@ -95,6 +99,10 @@ class DataLoader:
     def __get_reaction_formula_components(self, table_name, is_product, rt_reaction_formulas):
         """
         read public.reaction_formula & public.reaction_reactant or public.reaction_product
+        :param table_name: reaction_product or reaction_reactant
+        :param is_product: boolean, indicate product or reactant
+        :param rt_reaction_formulas: dictionary of RF
+        :return:
         """
         sql = 'SELECT a.*, b.* from ' + DataLoader.lyr_reaction_formula + ' a,' \
               + table_name + ' b ' \
@@ -131,6 +139,33 @@ class DataLoader:
         # add the products per reaction formula
         self.__get_reaction_formula_components(DataLoader.lyr_reaction_product, True, rt_reaction_formulas)
         return rt_reaction_formulas
+
+    def get_emission_data(self):
+        """
+        read the public.emission_data table information and save into a dictionary
+        :return: {reaction_formula_id: list of EmissionData}
+        """
+        sql = "select * from " + DataLoader.lyr_emission_data
+        lyr = self.conn.ExecuteSQL(sql)
+        if lyr is None:
+            print("[ERROR]: layer name", DataLoader.lyr_emission_data, "could not be found in database ", self.__db_name, "@", self.__db_server)
+            return None
+        else:
+            # print(lyr)
+            if __debug__:
+                feature_count = lyr.GetFeatureCount()
+                print("# of emission data: ", feature_count)
+            rt_emis_data = {}
+            for feature in lyr:
+                rf_id = feature.GetField('reaction_formula_id')
+                if rf_id not in rt_emis_data:
+                    rt_emis_data[rf_id] = [EmissionData(feature)]
+                else:
+                    rt_emis_data[rf_id].append(EmissionData(feature))
+            # important: reset the reading
+            lyr.ResetReading()
+            self.conn.ReleaseResultSet(lyr)
+            return rt_emis_data
 
     def get_factories(self):
         """
@@ -220,12 +255,38 @@ class DataLoader:
             self.conn.ReleaseResultSet(lyr)
             return factory_products
 
+    def get_utility_type(self):
+        """
+        read the gaolanport.utility_type table information and save into a dictionary
+        :return: {object_id: UtilityType instance}
+        """
+        sql = "select * from " + DataLoader.lyr_utility_type
+        lyr = self.conn.ExecuteSQL(sql)
+        if lyr is None:
+            print("[ERROR]: layer name", DataLoader.lyr_utility_type, "could not be found in database ", self.__db_name, "@", self.__db_server)
+            return None
+        else:
+            # print(lyr)
+            if __debug__:
+                feature_count = lyr.GetFeatureCount()
+                print("# of utility types: ", feature_count)
+            rt_util_types = {}
+            for feature in lyr:
+                obj_id = feature.GetField('object_id')
+                rt_util_types[obj_id] = UtilityType(feature)
+            # important: reset the reading
+            lyr.ResetReading()
+            self.conn.ReleaseResultSet(lyr)
+            return rt_util_types
 
 if __name__ == "__main__":
     get_all_drivers()
     db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     all_reactions = db_loader.get_all_reaction_formulas()
+    all_utility_types = db_loader.get_utility_type()
+    all_emission_data = db_loader.get_emission_data()
+
     # get factories
     test_factories = db_loader.get_factories()
     # get products of all factories

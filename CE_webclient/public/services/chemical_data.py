@@ -15,7 +15,8 @@ class Chemical:
         self.unit = tmp['unit']
         self.unit_cost = tmp['unit_cost']   # cost per 'unit'
         self.unit_transport_cost = tmp['unit_transport_cost']
-        self.currency = tmp['currency']
+        self.currency = tmp['cost_currency']
+        self.sp_heat = tmp['sp_heat']   # unit: J/Kg.K at STP(standard temperature pressure)
 
     @property
     def name(self):
