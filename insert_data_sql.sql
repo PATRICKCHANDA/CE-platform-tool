@@ -29,13 +29,13 @@ insert into public.reaction_reactant values(6, 2, '1/c', 'moles', 1);
 
 -- public.emission_data
 insert into public.emission_data values(1, 1, 'CO2', '二氧化碳', 'kg/kg', 0.21, null, 0.22, 0.43);
-insert into public.emission_data values(2, 1, 'PM particle', '细微颗粒', 'kg/kg', null, null, 0.0727, 0.0727);
-insert into public.emission_data values(3, 1, 'NOx', '氮氧化物', 'kg/kg', null, null, 0.00748, 0.00748);
-insert into public.emission_data values(4, 2, 'CO2', '二氧化碳', 'kg/kg', null, 0.16223021, 0.22, 0.38);
-insert into public.emission_data values(5, 2, 'PM particle', '细微颗粒', 'kg/kg', null, 0.0226, 0.0727, 0.0953);
-insert into public.emission_data values(6, 2, 'NOx', '氮氧化物', 'kg/kg', null, 0.00167, 0.00748, 0.00915);
-insert into public.emission_data values(7, 2, 'NH3', '氨', 'kg/kg', null, null,null, 0.0587);
-insert into public.emission_data values(8, 2, 'EO', '环氧乙烷', 'kg/kg', null, null, null, 0.0152);
+insert into public.emission_data values(2, 1, 'PM particle', '细微颗粒', 'kg/kg', null, null, 0.000727, 0.000727);
+insert into public.emission_data values(3, 1, 'NOx', '氮氧化物', 'kg/kg', null, null, 0.0000748, 0.0000748);
+insert into public.emission_data values(4, 2, 'CO2', '二氧化碳', 'kg/kg', null, 0.16223021, 0.22267, 0.38490);
+insert into public.emission_data values(5, 2, 'PM particle', '细微颗粒', 'kg/kg', null, 0.000226, 0.000727, 0.000953);
+insert into public.emission_data values(6, 2, 'NOx', '氮氧化物', 'kg/kg', null, 0.0000167, 0.0000748, 0.0000915);
+insert into public.emission_data values(7, 2, 'NH3', '氨', 'kg/kg', null, null,null, 0.00587);
+insert into public.emission_data values(8, 2, 'EO', '环氧乙烷', 'kg/kg', null, null, null, 0.00152);
 
 
 -- gaolanport.factory_reaction_product
@@ -50,7 +50,11 @@ insert into gaolanport.utility_type values(4, 'heat thermal', '热量', 'KWh', '0.
 insert into gaolanport.utility_type values(5, 'water treatment', '水处理', 'GJ', '0.35', 'EUR');
 
 -- gaolanport.factory_reaction_utility
-insert into gaolanport.factory_reaction_utility values()
+insert into gaolanport.factory_reaction_utility values(2,1,1,null,null,null);
+insert into gaolanport.factory_reaction_utility values(2,1,2,null,null,null);
+insert into gaolanport.factory_reaction_utility values(2,1,3,null,null,null);
+insert into gaolanport.factory_reaction_utility values(2,1,4,null,null,null);
+insert into gaolanport.factory_reaction_utility values(2,1,5,null,null,null);
 
 -- gaolanport.factory_emission
 

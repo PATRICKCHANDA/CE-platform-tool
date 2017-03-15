@@ -36,6 +36,7 @@ class DataLoader:
     """
     lyr_factory = 'gaolanport.factory'
     lyr_factory_reaction_product = 'gaolanport.factory_reaction_product'
+    lyr_factory_reaction_utility = 'gaolanport.factory_reaction_utility'
     lyr_chemical = 'public.chemical'
     lyr_reaction_formula = 'public.reaction_formula'
     lyr_reaction_reactant = 'public.reaction_reactant'
@@ -193,7 +194,7 @@ class DataLoader:
             lyr.ResetReading()
             return rt_factories
 
-    def get_factories_products(self, factories, reactions, chemicals):
+    def get_factories_products(self, factories, reactions, chemicals, emission_info):
         """
         read gaolanport.factory_reaction_product to get all the products information
         :param factories:
@@ -226,11 +227,47 @@ class DataLoader:
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
-            # add the factory byproducts of each product line
+            # add the factory byproducts, emission of each product line
             for factory in factories.values():
-                for rf_id, product_line in factory.factory_product_lines.items():
-                    list_byproducts = product_line.add_byproducts(reactions, chemicals)
-                    print(list_byproducts, " byproducts are added for ", reactions[rf_id].name, ' for ', factory.factory_name)
+                factory.calculate_byproducts_per_product_line(chemicals)
+                factory.calculate_emission_per_product_line(emission_info)
+
+    # todo:
+    def get_factories_utilities(self, factories, utilities_info, chemicals_info):
+        """
+        read the gaolanport.factory_reaction_utility table
+        :param factories: {id: Factory instance}
+        :param utilities_info: {object_id: UtilityType instance}
+        :param chemicals_info: {chemical_id: Chemical instance}
+        :return:
+        """
+        sql = "select * from " + DataLoader.lyr_factory_reaction_utility
+        lyr = self.conn.ExecuteSQL(sql)
+        if lyr is None:
+            print("[ERROR]: layer name", DataLoader.lyr_factory_reaction_utility, "could not be found in database ", self.__db_name, "@", self.__db_server)
+            return None
+        else:
+            # print(lyr)
+            if __debug__:
+                feature_count = lyr.GetFeatureCount()
+                print("# of factory utility: ", feature_count)
+            for feature in lyr:
+                factory_id = feature.GetField('factory_id')
+                rf_id = feature.GetField('reaction_formula_id')
+                utility_obj_id = feature.GetField('utility_type_id')    # key for in utilities_info
+                if utility_obj_id not in utilities_info:
+                    print('[warning]: Unknown ', utility_obj_id, ' in utility_type table')
+                    continue
+                if factory_id not in factories:
+                    print('[warning]: Unknown ', factory_id, ' in factory table')
+                    continue
+                else:
+                    factories[factory_id].store_utilities(rf_id, utility_obj_id)
+            # important: reset the reading
+            lyr.ResetReading()
+            self.conn.ReleaseResultSet(lyr)
+            for factory in factories.values():
+                factory.calculate_utilities_per_product_line(all_utility_info, chemicals_info)
 
     # Deprecated
     def get_factory_products(self, factory_id):
@@ -284,13 +321,14 @@ if __name__ == "__main__":
     db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     all_reactions = db_loader.get_all_reaction_formulas()
-    all_utility_types = db_loader.get_utility_type()
+    all_utility_info = db_loader.get_utility_type()
     all_emission_data = db_loader.get_emission_data()
 
     # get factories
     test_factories = db_loader.get_factories()
     # get products of all factories
-    db_loader.get_factories_products(test_factories, all_reactions, all_chemicals)
+    db_loader.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
+    db_loader.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
     db_loader.get_factory_products(2)
     db_loader.close()
 

@@ -1,22 +1,38 @@
 from .unit_conversion import UnitConversion
 
+HEAT_CAPACITY_RATIO = 1.4
+
 
 class ProcessComponent:
     """
     base class for Process-Product/ByProduct/Material
     """
-    def __init__(self, chem_id, quantity, quantity_unit, name, value=0):
-        self.chemical_id = chem_id
+    def __init__(self, comp_id, mps, quantity, quantity_unit, name, value_unit, value=0.0):
+        """
+        :param comp_id: chemical_id / utility_type_id
+        :param mps: moles per second
+        :param quantity:
+        :param quantity_unit:
+        :param name:
+        :param value_unit
+        :param value:
+        """
+        self.component_id = comp_id
         self.name = name
-        self.quantity = quantity
+        self.moles_per_second = mps
+        self.quantity = quantity    # Tonnes/year
         self.quantity_unit = quantity_unit
-        self.annual_value = value # < 0 means cost of buy, > 0 means product
+        self.annual_value = value   # < 0 means cost of buy, > 0 means product
+        self.value_unit = value_unit
 
+    @property
     def component_json(self):
-        return {'name': self.name,
+        return {'id': self.component_id,
+                'name': self.name,
                 'quantity': self.quantity,
                 'unit': self.quantity_unit,
-                'annual_value': self.annual_value
+                'annual_value': self.annual_value,
+                'currency': self.value_unit
                 }
 
 
@@ -24,16 +40,16 @@ class ProcessByProduct(ProcessComponent):
     """
     a process's byproduct
     """
-    def __init__(self, chem_id, name, quantity, quantity_unit, value):
-        ProcessComponent.__init__(self, chem_id, quantity, quantity_unit, name, value)
+    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value):
+        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value)
 
 
 class ProcessMaterial(ProcessComponent):
     """
     a process's (reaction) material
     """
-    def __init__(self, chem_id, name, quantity, quantity_unit, value):
-        ProcessComponent.__init__(self, chem_id, quantity, quantity_unit, name, value)
+    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value):
+        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value)
 
 
 class ProcessProduct(ProcessComponent):
@@ -48,8 +64,7 @@ class ProcessProduct(ProcessComponent):
         :param unit:
         :param name
         """
-        ProcessComponent.__init__(self, product_chem_id, quantity, unit, name)
-        self.moles_per_second = 1
+        ProcessComponent.__init__(self, product_chem_id, 1, quantity, unit, name)
 
     def calculate_product_value(self, chemical_info):
         self.annual_value = UnitConversion.convert(chemical_info.unit_cost,
@@ -70,7 +85,7 @@ class ProcessProduct(ProcessComponent):
         # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
         # step 0. convert the product quantity from unit(here is T)/year to moles/s
         self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
-                           / (chemicals_info[self.chemical_id].molar_mass * production_time)
+                           / (chemicals_info[self.component_id].molar_mass * production_time)
         # step 1. get the reactants info from the reaction_formula
         for chem_id, reactant in a_reaction_formula.reactants.items():
             c = conversion
@@ -88,7 +103,13 @@ class ProcessProduct(ProcessComponent):
                                                  chemicals_info[chem_id].unit,
                                                  self.quantity_unit, 'QUALITY') * annual_quantity
             # add into material container
-            material[chem_id] = ProcessMaterial(chem_id, chemicals_info[chem_id].name, annual_quantity, self.quantity_unit, -annual_cost)
+            material[chem_id] = ProcessMaterial(chem_id,
+                                                chemicals_info[chem_id].name,
+                                                moles_reactant,
+                                                annual_quantity,
+                                                self.quantity_unit,
+                                                -annual_cost
+                                                )
 
 
 class FactoryProcess:
@@ -97,8 +118,8 @@ class FactoryProcess:
     waste treatment
     """
     def __init__(self, **kwargs):
-        self.rf_name = kwargs['rf_name']
-        self.reaction_formula_id = kwargs['rf_id']
+        self.rf_info = kwargs['rf_info']
+        self.rf_name = self.rf_info.name
         self.days_of_production = kwargs['DOP']
         self.hours_of_production = kwargs['HOP']
         self.inlet_temperature = kwargs['inlet_T']
@@ -108,20 +129,24 @@ class FactoryProcess:
         self.conversion = kwargs['conversion']
         self.percent_heat_removed_by_cooling_tower = kwargs['perc_heat_removed']
         self.__products = dict()    # contains ProcessProduct per reaction_formula
-        self.__byproducts = {}      # {chemical_id: ProcessByProduct}
-        self.__material = {}        # {chemical_id: ProcessMaterial}
-        self.__utility = {}
+        # reference product chem id: in the DB, one of ReactionFormula's products has quantity equal to '1',
+        # and all other products' quantity of this RF is based on the reference product
+        self.__ref_product_chem_id = None
+        self.__byproducts = {}      # {chemical_id: ProcessByProduct instance}
+        self.__material = {}        # {chemical_id: ProcessMaterial instance}
+        self.__utility = {}         # {utility_type_id: ProcessComponent instance}
+        self.__emission = {}        # {name: quantity}
         # indicate the material is already added, if true, when the next product added for this process, we do not need
-        # to calculate the material again!
+        # to calculate the material again! So, different products of the process share the same material!
+        # Only calculate once!
         self.__material_added = False
 
-    def add_product(self, product_chemical_id, quantity, unit, rf_info, all_chem_info):
+    def add_product(self, product_chemical_id, quantity, unit, all_chem_info):
         """
-        create ProcessProduct, which contains the desired product, byproducts, material information
+        create a ProcessProduct, and calculate its value and also required material information
         :param product_chemical_id:
         :param quantity:
         :param unit:
-        :param rf_info: a reaction_formula instance
         :param all_chem_info: dictionary of all chemical
         :return:
         """
@@ -131,41 +156,38 @@ class FactoryProcess:
                                    unit,
                                    all_chem_info[product_chemical_id].name
                                    )
+        # determine the reference product: to be used when calculate byproducts, since in the DB, all other products
+        # of this reaction is based on the reference product
+        if self.rf_info.products[product_chemical_id].quantity == '1':
+            self.__ref_product_chem_id = product_chemical_id
+
         a_product.calculate_product_value(all_chem_info[product_chemical_id])
         if not self.__material_added:
             # get the by-products of this reaction formula
             a_product.calculate_materials(self.__material,
                                           self.conversion,
                                           self.production_time,
-                                          rf_info,
+                                          self.rf_info,
                                           all_chem_info
                                           )
             # set material is added
             self.__material_added = True
         self.__products[product_chemical_id] = a_product
 
-    def add_byproducts(self, all_rf_info, all_chem_info):
+    def add_byproducts(self, all_chem_info):
         """
-        add byproducts
-        :param all_rf_info:
+        add byproducts for this process, different products of the process share the same material
         :param all_chem_info:
         :return: list of byproducts name
         """
-        a_reaction_formula = all_rf_info[self.reaction_formula_id]
         # step 0. get all the products info from the reaction_formula, the reaction_product with quantity is '1' moles
         # is the reference product, since the quantity of all other products is based on this
-        a_product = None
-        for chem_id, rf_product in a_reaction_formula.products.items():
-            if rf_product.quantity == '1' and chem_id in self.__products:
-                # use this product as reference product, in the database we have made sure this is one of the desired
-                # product with quantity as 1
-                a_product = self.__products[chem_id]
-                break
+        a_product = self.__products[self.__ref_product_chem_id]
 
         # step 1. take one product from this FactoryProcess(reaction formula), if not a product, then it is a
         # byproduct
         byproduct_names = []
-        for chem_id, rf_product in a_reaction_formula.products.items():
+        for chem_id, rf_product in self.rf_info.products.items():
             # chem_id not in the products, then consider it as byproduct
             if chem_id not in self.__products:
                 c = self.conversion
@@ -182,8 +204,10 @@ class FactoryProcess:
                 annual_cost = UnitConversion.convert(all_chem_info[chem_id].unit_cost,
                                                      all_chem_info[chem_id].unit,
                                                      a_product.quantity_unit, 'QUALITY') * annual_quantity
+                # save as ProcessByProduct
                 self.__byproducts[chem_id] = ProcessByProduct(chem_id,
                                                               all_chem_info[chem_id].name,
+                                                              moles_byproduct,
                                                               annual_quantity,
                                                               a_product.quantity_unit,
                                                               -annual_cost
@@ -191,9 +215,88 @@ class FactoryProcess:
                 byproduct_names.append(all_chem_info[chem_id].name)
         return byproduct_names
 
+    def calculate_process_emission(self, emission_data):
+        """
+        calculate the process emission based on the emission_data
+        :param emission_data: list of EmissionData instance
+        :return:
+        """
+        if self.__ref_product_chem_id is not None:
+            a_product = self.__products[self.__ref_product_chem_id]
+            for emis_data in emission_data:
+                self.__emission[emis_data.name] = emis_data.total * a_product.quantity  # todo: kg/kg * tonnes/year
+
+    # todo: need validation by collega's and the structure and data may be changed!
+    def calculate_process_utilities(self, all_utility_info, all_chem_info):
+        volume_flow = 0
+        heat_thermal_mass = 0
+        for material in self.__material.values():
+            chem_info = all_chem_info[material.component_id]
+            molar_mass_kg = UnitConversion.convert(chem_info.molar_mass, 'g', 'kg', 'QUALITY')
+            # sum the volume flow of the material
+            try:
+                volume_flow += material.moles_per_second * molar_mass_kg * 3600 / chem_info.density
+                # sum the thermal mass
+                heat_thermal_mass += UnitConversion.convert(
+                    molar_mass_kg * material.moles_per_second * chem_info.sp_heat
+                    * (self.rf_info.temperature - self.inlet_temperature),
+                    'J',
+                    'kWh',
+                    'ENERGY'
+                    )
+            except ZeroDivisionError or TypeError:
+                print("[Error]: Missing density or SP_heat information for ", chem_info.name, " in FactoryProcess.calculate_process_utilities()")
+                return
+
+        # compressor sizing, 1 bars = 100 Kpa
+        tmp = HEAT_CAPACITY_RATIO / (HEAT_CAPACITY_RATIO - 1)
+        Pad = 2.78 * 1E-4 * volume_flow * self.inlet_pressure * 100 * tmp * \
+              (pow(self.rf_info.pressure / self.inlet_pressure, 1.0/tmp) - 1)
+        # step 0: get the amount
+        # electricity
+        electricity = UnitConversion.convert(Pad, 'kJ', 'kWh', 'ENERGY')
+        # heat reaction
+        c = self.conversion     # c is used in the self.rf_info.heat_reaction_formula
+        heat_reaction = UnitConversion.convert(eval(self.rf_info.heat_reaction_formula) * self.__products[self.__ref_product_chem_id].moles_per_second,
+                                               'kJ', 'kWh', 'ENERGY')
+        # make up water
+        make_up_water = UnitConversion.convert(self.percent_heat_removed_by_cooling_tower * (abs(heat_reaction) + abs(heat_thermal_mass)),
+                                               'kWh', 'J', 'ENERGY') / (2.26 * 1E6)
+        # water treatment
+        water_treatment = UnitConversion.convert(self.percent_heat_removed_by_cooling_tower * (abs(heat_reaction) + abs(heat_thermal_mass)),
+                                               'kWh', 'GJ', 'ENERGY')
+
+        # step 1: calculate the cost of different utilities
+        for obj_id in self.__utility.keys():
+            an_utility_info = all_utility_info[obj_id]
+            utility_name = an_utility_info.name_en.lower().strip()
+            if utility_name == "electricity":
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, electricity, an_utility_info.unit, utility_name,
+                                                          electricity * an_utility_info.unit_cost * self.production_time)
+            elif utility_name == "heat reaction":
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, heat_reaction, an_utility_info.unit, utility_name,
+                                                          (1.0 - self.percent_heat_removed_by_cooling_tower) * heat_reaction * an_utility_info.unit_cost * self.production_time)
+            elif utility_name == "heat thermal":
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, heat_thermal_mass, an_utility_info.unit,
+                                                          utility_name,
+                                                          heat_thermal_mass * an_utility_info.unit_cost * self.production_time)
+            elif utility_name == "make up water":
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, make_up_water, an_utility_info.unit, utility_name,
+                                                          make_up_water * an_utility_info.unit_cost * self.production_time)
+            elif utility_name == "water treatment":
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, water_treatment, an_utility_info.unit,
+                                                          utility_name,
+                                                          water_treatment * an_utility_info.unit_cost * self.production_time)
+            else:
+                print("[Warning:] Unknown ", utility_name)
+
     @property
     def products(self):
         return self.__products
+
+    @property
+    def utilities(self):
+        return self.__utility
 
     @property
     def production_time(self):
@@ -224,11 +327,19 @@ class FactoryProcess:
     @property
     def revenue_per_year(self):
         """
-        a product line revenue: products - material - byproducts - ...
+        a product line revenue: products - material - byproducts - utility...
         :return:
         """
-        return self.products_value - self.material_cost - self.byproducts_cost
+        return self.products_value - self.material_cost - self.byproducts_cost - self.utilities_cost
 
+    @property
+    def utilities_cost(self):
+        """
+        :return: cost of all utilities
+        """
+        return sum(u.annual_value for u in self.__utility.values())
+
+    @property
     def factory_process_json(self):
         """
         :return: dictionary of factory process information
@@ -242,6 +353,8 @@ class FactoryProcess:
                 'products': [p.component_json for p in self.__products.values()],
                 'by-products': [p.component_json for p in self.__byproducts.values()],
                 'material': [p.component_json for p in self.__material.values()],
+                'emissions': self.__emission,
+                'utilities': self.__utility,
                 'process_annual_revenue': self.revenue_per_year
                 }
 
@@ -272,8 +385,6 @@ class Factory:
         :return:
         """
         product_chem_id = factory_reaction_info.GetField('desired_chemical_id')
-        chem_name = factory_reaction_info.GetField('name_en')
-        chem_name_cn = factory_reaction_info.GetField('name_cn')
         quantity = factory_reaction_info.GetField('desired_quantity')
         quantity_unit = factory_reaction_info.GetField('unit')
 
@@ -281,8 +392,7 @@ class Factory:
         # products share the same material
         if rf_id not in self.__product_lines:
             # setup the FactoryProcess with basic process information
-            self.__product_lines[rf_id] = FactoryProcess(rf_name=reaction_formulas_info[rf_id].name,
-                                                         rf_id=rf_id,
+            self.__product_lines[rf_id] = FactoryProcess(rf_info=reaction_formulas_info[rf_id],
                                                          DOP=factory_reaction_info.GetField('days_of_production'),
                                                          HOP=factory_reaction_info.GetField('hours_of_production'),
                                                          inlet_T=factory_reaction_info.GetField('inlet_temperature'),
@@ -295,9 +405,49 @@ class Factory:
         self.__product_lines[rf_id].add_product(product_chem_id,
                                                 quantity,
                                                 quantity_unit,
-                                                reaction_formulas_info[rf_id],
                                                 chemicals_info
                                                 )
+
+    def calculate_byproducts_per_product_line(self, chemicals_info):
+        """
+        calculate byproducts per product line in the factory
+        :param chemicals_info:
+        :return:
+        """
+        for rf_id, product_line in self.factory_product_lines.items():
+            list_byproducts = product_line.add_byproducts(chemicals_info)
+            print(list_byproducts,
+                  " byproducts are added for ",
+                  product_line.rf_info.name,
+                  ' for ',
+                  self.factory_name
+                  )
+
+    def calculate_emission_per_product_line(self, all_emission_data):
+        for rf_id, product_line in self.__product_lines.items():
+            product_line.calculate_process_emission(all_emission_data[rf_id])
+
+    def calculate_utilities_per_product_line(self, all_utility_info, all_chem_info):
+        """
+        calculate all utilities for each product line (FactoryProcess), call this function when all data is read
+        from factory_reaction_utility table
+        :param all_utility_info:
+        :param all_chem_info:
+        :return:
+        """
+        for product_line in self.__product_lines.values():
+            product_line.calculate_process_utilities(all_utility_info, all_chem_info)
+
+    def store_utilities(self, a_rf_id, utility_obj_id):
+        """
+        store the utilities that a process is used by the factory, no calculation!
+        :param a_rf_id:
+        :param utility_obj_id:
+        :return:
+        """
+        if a_rf_id not in self.__product_lines:
+            print('[warning]: unknown', a_rf_id, ' in Factory production line')
+        self.__product_lines[a_rf_id].utilities[utility_obj_id] = None
 
     @property
     def factory_product_lines(self):
@@ -312,7 +462,17 @@ class Factory:
         return self.__name
 
     @property
-    def factory_json(self):
+    def factory_revenue(self):
+        """
+        :return: total revenue of the factory
+        """
+        rt_value = 0
+        for product_line in self.__product_lines.values():
+            rt_value += product_line.revenue_per_year
+        return rt_value
+
+    @property
+    def factory_basic_info_json(self):
         return {'type': 'Feature',
                 'geometry': self.__geometry,
                 'id': self.factory_id,
@@ -321,4 +481,9 @@ class Factory:
                                }
                 }
 
-
+    def factory_process_json(self, rf_id):
+        """
+        :param rf_id: reaction formula id or a product_line
+        :return: dictionary of the specified FactoryProcess
+        """
+        return self.__product_lines[rf_id].factory_process_json

@@ -13,5 +13,9 @@ class UtilityType:
         self.cost_currency = info.GetField('cost_currency')
 
     @property
+    def name_en(self):
+        return self.__name_en
+
+    @property
     def name(self):
         return self.__name_cn + "(" + self.__name_en + ")"

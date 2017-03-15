@@ -4,9 +4,11 @@ class UnitConversion:
     """
     QUALITY = 'QUALITY'
     TIME = 'TIME'
+    ENERGY = 'ENERGY'
     LinearConversionTable = dict()
     LinearConversionTable[QUALITY] = dict()
     LinearConversionTable[TIME] = dict()
+    LinearConversionTable[ENERGY] = dict()
 
     LinearConversionTable[QUALITY]['g'] = 1
     LinearConversionTable[QUALITY]['kg'] = 1E3
@@ -24,6 +26,11 @@ class UnitConversion:
     LinearConversionTable[TIME]["y"] = 365.25 * 24 * 60 * 60
     LinearConversionTable[TIME]["year"] = 365.25 * 24 * 60 * 60
     LinearConversionTable[TIME]["years"] = 365.25 * 24 * 60 * 60
+
+    LinearConversionTable[ENERGY]['j'] = 1.0  # joule
+    LinearConversionTable[ENERGY]['kj'] = 1.0 * 1E3  # joule
+    LinearConversionTable[ENERGY]['gj'] = 1.0 * 1E9  # joule
+    LinearConversionTable[ENERGY]['kwh'] = 3.6 * 1E6
 
     @classmethod
     def convert(cls, value, src_unit, dst_unit, category):
