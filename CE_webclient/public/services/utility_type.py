@@ -10,7 +10,7 @@ class UtilityType:
         self.__name_cn = info.GetField('name_cn')
         self.unit = info.GetField('unit')
         self.unit_cost = info.GetField('unit_cost')
-        self.cost_currency = info.GetField('cost_currency')
+        self.currency = info.GetField('cost_currency')  # currency symbol
 
     @property
     def name_en(self):

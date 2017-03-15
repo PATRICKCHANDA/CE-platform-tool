@@ -200,6 +200,7 @@ class DataLoader:
         :param factories:
         :param reactions: dictionary of reaction formula's
         :param chemicals: dictionary of all chemicals
+        :param emission_info: dictionary of all emission data
         :return:
         """
         sql = 'select b.*, c.name_en, c.name_cn from ' + DataLoader.lyr_factory + ' a, ' \
@@ -255,6 +256,7 @@ class DataLoader:
                 factory_id = feature.GetField('factory_id')
                 rf_id = feature.GetField('reaction_formula_id')
                 utility_obj_id = feature.GetField('utility_type_id')    # key for in utilities_info
+                # check
                 if utility_obj_id not in utilities_info:
                     print('[warning]: Unknown ', utility_obj_id, ' in utility_type table')
                     continue
