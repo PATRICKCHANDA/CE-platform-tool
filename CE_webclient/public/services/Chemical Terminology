@@ -14,3 +14,12 @@ MeOH = methanol甲醇
 PBAT =poly butyrate adipate terephtalate聚己酸对苯二甲酸丁酸酯
 AdA =adipic acid己二酸
 BDO =butanediol丁二醇
+
+Analysis:
+  -- a new process: having added value, and change of utility and waste
+
+
+suggestions for downdtream process: select a process from libarary
+Library of factories:
+ library of process:  4 process, 2 of them are from Gaolan
+ library of utility:

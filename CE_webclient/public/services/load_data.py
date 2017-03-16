@@ -72,6 +72,7 @@ class DataLoader:
         close database connection
         :return:
         """
+        print("[Info]: Database disconnected")
         self.conn = None
 
     def get_all_chemicals(self):
@@ -269,7 +270,7 @@ class DataLoader:
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
             for factory in factories.values():
-                factory.calculate_utilities_per_product_line(all_utility_info, chemicals_info)
+                factory.calculate_utilities_per_product_line(utilities_info, chemicals_info)
 
     # Deprecated
     def get_factory_products(self, factory_id):
@@ -320,18 +321,18 @@ class DataLoader:
 
 if __name__ == "__main__":
     get_all_drivers()
-    db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
-    all_chemicals = db_loader.get_all_chemicals()
-    all_reactions = db_loader.get_all_reaction_formulas()
-    all_utility_info = db_loader.get_utility_type()
-    all_emission_data = db_loader.get_emission_data()
+    db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+    all_chemicals = db.get_all_chemicals()
+    all_reactions = db.get_all_reaction_formulas()
+    all_utility_info = db.get_utility_type()
+    all_emission_data = db.get_emission_data()
 
     # get factories
-    test_factories = db_loader.get_factories()
+    test_factories = db.get_factories()
     # get products of all factories
-    db_loader.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
-    db_loader.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
-    db_loader.get_factory_products(2)
-    db_loader.close()
+    db.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
+    db.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
+    db.get_factory_products(2)
+    db.close()
 
 

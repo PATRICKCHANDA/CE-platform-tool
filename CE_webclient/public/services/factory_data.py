@@ -532,9 +532,13 @@ class Factory:
                                }
                 }
 
-    def factory_process_json(self, rf_id):
+    def get_a_factory_process_json(self, rf_id):
         """
         :param rf_id: reaction formula id or a product_line
         :return: dictionary of the specified FactoryProcess (json format)
         """
         return self.__product_lines[rf_id].factory_process_json
+
+    @property
+    def factory_products_json(self):
+        return [(rf_id, product.factory_process_json) for rf_id, product in self.__product_lines.items()]

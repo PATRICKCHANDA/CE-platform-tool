@@ -14,15 +14,16 @@
 <body>
     <div class="container-fluid main_container">
         <div id="title-row" class="row justify-content-center">
+            <button id="btn_full_view">Back</button>
             <div class="col-sm-12" align="center">
                 <h1>高栏港循环经济工具平台</h1>
             </div>
         </div>
         <!-- contains the map area, info and analysis -->
         <div id="content_row" class="row justify-content-between">
-            <div class="col-md-4" id="map-col" >Gaolan Area</div>
-            <div class="col-md-4" id="info-col">Company info</div>
-            <div class="col-md-4" id="analysis-col">Analysis</div>
+            <div class="col-md-12" id="map-col" >Gaolan Area</div>
+            <div class="collapse" id="info-col">Company info</div>
+            <div class="collapse" id="analysis-col">Analysis</div>
         </div>
     </div>
 
@@ -33,6 +34,7 @@
     <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
     <script src="../static/js/urls.js"></script>
     <script src="../static/js/map.js"></script>
+    <script src="../static/js/control.js"></script>
 
     <!--<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tether.min.js') }}"></script>

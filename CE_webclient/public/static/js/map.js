@@ -68,6 +68,15 @@
           - button button  button
         - div
     */
+    $("#btn_full_view").on('click', function() {
+        changeLayout();
+        mymap.invalidateSize();
+//        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
+    });
+
+    $("#map-col").on('map-container-resize', function () {
+
+    });
 });
 
 // query the database to get the factories, buildings, rails, roads. And display them in the map
