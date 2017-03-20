@@ -22,7 +22,25 @@
         <!-- contains the map area, info and analysis -->
         <div id="content_row" class="row justify-content-between">
             <div class="col-md-12" id="map-col" >Gaolan Area</div>
-            <div class="collapse" id="info-col">Company info</div>
+            <div class="collapse" id="info-col">
+                <div class="row" id="factory_processes_info">
+                    <label class="col-sm-2">产品名称(product):</label>
+                    <select class="col-sm-6 dropdown-menu"></select>
+                </div>
+                <div class="panel panel-info" id="process_input">
+                    <div class="panel-heading">基本输入信息</div>
+                    <table></table>
+                </div>
+                <div class="row" id="material">
+                    <table>material table</table>
+                </div>
+                <div class="row" id="emission">
+                    <table>emision table</table>
+                </div>
+                <div class="row" id="utilities">
+                    <table>utilities table</table>
+                </div>
+            </div>
             <div class="collapse" id="analysis-col">Analysis</div>
         </div>
     </div>
@@ -35,6 +53,7 @@
     <script src="../static/js/urls.js"></script>
     <script src="../static/js/map.js"></script>
     <script src="../static/js/control.js"></script>
+    <script src="../static/js/factory_process.js"></script>
 
     <!--<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tether.min.js') }}"></script>

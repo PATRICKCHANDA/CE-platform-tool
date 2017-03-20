@@ -391,11 +391,9 @@ class FactoryProcess:
         :return: dictionary of factory process information
         """
         return {'rf_name': self.rf_name,
-                'DOP': self.days_of_production,
-                'HOP': self.hours_of_production,
-                'inlet_T': self.inlet_temperature,
-                'inlet_P': self.inlet_pressure,
-                'conversion': self.conversion,
+                'process_basis': {'DOP': self.days_of_production, 'HOP': self.hours_of_production,
+                                  'inlet_T': self.inlet_temperature, 'inlet_P': self.inlet_pressure,
+                                  'conversion': self.conversion},
                 'products': [p.component_json for p in self.__products.values()],
                 'by-products': [p.component_json for p in self.__byproducts.values()],
                 'material': [p.component_json for p in self.__material.values()],
@@ -541,4 +539,7 @@ class Factory:
 
     @property
     def factory_products_json(self):
+        """
+        :return: all the factory product processes
+        """
         return [(rf_id, product.factory_process_json) for rf_id, product in self.__product_lines.items()]

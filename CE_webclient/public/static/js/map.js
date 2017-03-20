@@ -1,9 +1,10 @@
-﻿$(document).ready(function () {
-    var custom_bounds = new L.LatLngBounds(
-	    new L.LatLng(21.9, 113.12),
-	    new L.LatLng(22.000000, 113.3));
+﻿var custom_bounds = new L.LatLngBounds(
+    new L.LatLng(21.9, 113.12),
+    new L.LatLng(22.000000, 113.3));
 
-    var mymap = L.map('map-col', { zoomControl: false}).fitBounds(custom_bounds);
+var mymap = L.map('map-col', { zoomControl: false}).fitBounds(custom_bounds);
+
+$(document).ready(function () {
 //    mymap.crs = L.CRS.EPSG4326;
     // http://stackoverflow.com/questions/22926512/customize-zoom-in-out-button-in-leaflet-js
     // http://leafletjs.com/reference.html#control
@@ -69,14 +70,13 @@
         - div
     */
     $("#btn_full_view").on('click', function() {
-        changeLayout();
+        changeLayout(true);
         mymap.invalidateSize();
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
     });
 
-    $("#map-col").on('map-container-resize', function () {
-
-    });
+    // Todo: load all reaction_formula information
+    // todo: load all chemical information
 });
 
 // query the database to get the factories, buildings, rails, roads. And display them in the map
@@ -97,17 +97,21 @@ function loadGeometries(mymap) {
 
 // for each factory polygon, get its products
 function onEachFeature(feature, layer) {
+    // show the clicked feature name
     if (feature.properties) {
         layer.bindPopup(feature.id + ":" + feature.properties.name);
     }
 
     layer.on('click', function(e) {
+        changeLayout(false);
+        mymap.invalidateSize();
         // bind the feature to its products
-        $.getJSON(url_get_factory_products + this.feature.id)
+        factory_id = this.feature.id;
+        $.getJSON(url_get_factory_products + factory_id)
         .done(function (data) {
-            for (var i in data) {
-                console.log(data[i].properties)
-            }
+            if (data.length > 0)
+                console.log(data[0].rf_name)
+            display_factory_processes_info(factory_id, data);
         })
         .fail (function (status, err) {
             console.log("Error: failed to load products from factory", feature.id);
@@ -119,3 +123,4 @@ function onEachFeature(feature, layer) {
 function onFeatureClick(feature) {
     alert('click event: ' + feature.id)
 }
+
