@@ -1,20 +1,23 @@
 from .unit_conversion import UnitConversion
 
 HEAT_CAPACITY_RATIO = 1.4
+MEGA = "M"
+NUM_DIGITS = 0
 
 
 class ProcessComponent:
     """
     base class for Process-Product/ByProduct/Material
     """
-    def __init__(self, comp_id, mps, quantity, quantity_unit, name, value_unit, value=0.0):
+    def __init__(self, comp_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value=0.0):
         """
         :param comp_id: chemical_id / utility_type_id
         :param mps: moles per second
         :param quantity:
         :param quantity_unit:
         :param name:
-        :param value_unit
+        :param unit_value: value per unit
+        :param currency
         :param value:
         """
         self.component_id = comp_id
@@ -22,52 +25,71 @@ class ProcessComponent:
         self.moles_per_second = mps
         self.quantity = quantity    # Tonnes/year
         self.quantity_unit = quantity_unit
-        self.annual_value = value   # < 0 means cost of buy, > 0 means product
-        self.value_unit = value_unit    # currency symbol
+        self.annual_value = value   # < 0 means cost of buy, > 0 means profit
+        self.value_per_unit = value_per_unit
+        self.currency = currency    # currency symbol
 
     @property
     def component_json(self):
-        return {'id': self.component_id,
-                'name': self.name,
-                'quantity': self.quantity,
-                'unit': self.quantity_unit,
-                'annual_value': self.annual_value,
-                'currency': self.value_unit
-                }
+        if self.currency is None:
+            return {'id': self.component_id,
+                    'name': self.name,
+                    'quantity': round(self.quantity, NUM_DIGITS),
+                    'unit': self.quantity_unit,
+                    'value_per_unit': self.value_per_unit,
+                    'currency_value_per_unit': self.currency,
+                    'annual_value': round(self.annual_value, NUM_DIGITS),
+                    'currency': self.currency
+                    }
+        else:
+            new_currency_unit = MEGA + self.currency
+            new_value = UnitConversion.convert(self.annual_value, self.currency, new_currency_unit, "CURRENCY")
+            # self.value_unit = new_value_unit
+            return {'id': self.component_id,
+                    'name': self.name,
+                    'quantity': round(self.quantity, NUM_DIGITS),
+                    'unit': self.quantity_unit,
+                    'value_per_unit': self.value_per_unit,
+                    'currency_value_per_unit': self.currency,
+                    'annual_value': round(new_value, NUM_DIGITS),
+                    'currency': new_currency_unit
+                    }
 
 
 class ProcessByProduct(ProcessComponent):
     """
     a process's byproduct
     """
-    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_unit, value):
-        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_unit, value)
+    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_per_unit, currency, value):
+        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
 
 
 class ProcessMaterial(ProcessComponent):
     """
     a process's (reaction) material
     """
-    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_unit, value):
-        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_unit, value)
+    def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_per_unit, currency, value):
+        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
 
 
 class ProcessProduct(ProcessComponent):
     """
     a process's product
     """
-    def __init__(self, product_chem_id, quantity, quantity_unit, name, value_unit):
+    def __init__(self, product_chem_id, quantity, quantity_unit, name, value_per_unit, currency):
         """
         initial the factory product
         :param product_chem_id:
         :param quantity:
         :param quantity_unit:
-        :param name:
-        :param value_unit: currency symbol
+        :param name: product name
+        :param value_per_unit: value per unit
+        :param currency: currency symbol
         """
-        ProcessComponent.__init__(self, product_chem_id, 1, quantity, quantity_unit, name, value_unit)
+        ProcessComponent.__init__(self, product_chem_id, 1, quantity, quantity_unit, name, value_per_unit, currency)
 
     def calculate_product_value(self, chemical_info):
+        # kost per gram to kost per T
         self.annual_value = UnitConversion.convert(chemical_info.unit_cost,
                                                    chemical_info.unit,
                                                    self.quantity_unit,
@@ -112,6 +134,7 @@ class ProcessProduct(ProcessComponent):
                                                 moles_reactant,
                                                 annual_quantity,
                                                 self.quantity_unit,
+                                                chem_info.unit_cost,
                                                 chem_info.currency,
                                                 -annual_cost
                                                 )
@@ -136,7 +159,7 @@ class FactoryProcess:
         # reference product chem id: in the DB, one of ReactionFormula's products has quantity equal to '1',
         # and all other products' quantity of this RF is based on the reference product
         self.__ref_product_chem_id = None
-        self.__products = dict()    # contains ProcessProduct per reaction_formula
+        self.__products = dict()    # contains ProcessProduct per reaction_formula {chemical_id, ProcessProduct}
         self.__byproducts = {}      # {chemical_id: ProcessByProduct instance}
         self.__material = {}        # {chemical_id: ProcessMaterial instance}
         self.__utility = {}         # {utility_type_id: ProcessComponent instance}
@@ -151,7 +174,7 @@ class FactoryProcess:
         create a ProcessProduct, and calculate its value and also required material information
         :param product_chemical_id:
         :param quantity:
-        :param unit:
+        :param unit: quantity unit
         :param all_chem_info: dictionary of all chemical
         :return:
         """
@@ -160,6 +183,7 @@ class FactoryProcess:
                                    quantity,
                                    unit,
                                    all_chem_info[product_chemical_id].name,
+                                   all_chem_info[product_chemical_id].unit_cost,
                                    all_chem_info[product_chemical_id].currency
                                    )
         # determine the reference product: to be used when calculate byproducts, since in the DB, all other products
@@ -220,6 +244,7 @@ class FactoryProcess:
                                                               moles_byproduct,
                                                               annual_quantity,
                                                               a_product.quantity_unit,
+                                                              chem_info.unit_cost,
                                                               chem_info.currency,
                                                               -annual_cost
                                                               )
@@ -235,7 +260,10 @@ class FactoryProcess:
         if self.__ref_product_chem_id is not None:
             a_product = self.__products[self.__ref_product_chem_id]
             for emis_data in emission_data:
-                self.__emission[emis_data.name] = emis_data.total * a_product.quantity  # todo: kg/kg * tonnes/year
+                self.__emission[emis_data.name] = ProcessComponent(-1, None, emis_data.total * a_product.quantity,
+                                                                   a_product.quantity_unit,
+                                                                   emis_data.name,
+                                                                   None, None)
 
     # todo: need validation by collega's and the structure and data may be changed!
     def calculate_process_utilities(self, all_utility_info, all_chem_info):
@@ -282,13 +310,14 @@ class FactoryProcess:
         for obj_id in self.__utility.keys():
             an_utility_info = all_utility_info[obj_id]
             utility_name = an_utility_info.name_en.lower().strip()
-            value_unit = an_utility_info.currency
+            currency_unit = an_utility_info.currency
             if utility_name == "electricity":
                 self.__utility[obj_id] = ProcessComponent(obj_id, None, electricity,
                                                           an_utility_info.unit,
-                                                          utility_name,
-                                                          value_unit,
-                                                          electricity * an_utility_info.unit_cost * self.production_time
+                                                          an_utility_info.name,
+                                                          an_utility_info.unit_cost,
+                                                          currency_unit,
+                                                          -electricity * an_utility_info.unit_cost * self.production_time
                                                           )
             elif utility_name == "heat reaction":
                 cost_per_year = (1.0 - self.percent_heat_removed_by_cooling_tower)\
@@ -299,18 +328,20 @@ class FactoryProcess:
                                                           None,
                                                           heat_reaction,
                                                           an_utility_info.unit,
-                                                          utility_name,
-                                                          value_unit,
-                                                          cost_per_year
+                                                          an_utility_info.name,
+                                                          an_utility_info.unit_cost,
+                                                          currency_unit,
+                                                          -cost_per_year
                                                           )
             elif utility_name == "heat thermal":
                 self.__utility[obj_id] = ProcessComponent(obj_id,
                                                           None,
                                                           heat_thermal_mass,
                                                           an_utility_info.unit,
-                                                          utility_name,
-                                                          value_unit,
-                                                          heat_thermal_mass * an_utility_info.unit_cost
+                                                          an_utility_info.name,
+                                                          an_utility_info.unit_cost,
+                                                          currency_unit,
+                                                          -heat_thermal_mass * an_utility_info.unit_cost
                                                           * self.production_time
                                                           )
             elif utility_name == "make up water":
@@ -318,9 +349,10 @@ class FactoryProcess:
                                                           None,
                                                           make_up_water,
                                                           an_utility_info.unit,
-                                                          utility_name,
-                                                          value_unit,
-                                                          make_up_water * an_utility_info.unit_cost
+                                                          an_utility_info.name,
+                                                          an_utility_info.unit_cost,
+                                                          currency_unit,
+                                                          -make_up_water * an_utility_info.unit_cost
                                                           * self.production_time
                                                           )
             elif utility_name == "water treatment":
@@ -328,9 +360,10 @@ class FactoryProcess:
                                                           None,
                                                           water_treatment,
                                                           an_utility_info.unit,
-                                                          utility_name,
-                                                          value_unit,
-                                                          water_treatment * an_utility_info.unit_cost
+                                                          an_utility_info.name,
+                                                          an_utility_info.unit_cost,
+                                                           currency_unit,
+                                                          -water_treatment * an_utility_info.unit_cost
                                                           * self.production_time
                                                           )
             else:
@@ -354,14 +387,14 @@ class FactoryProcess:
         """
         :return: cost of all material of the process
         """
-        return abs(sum(v.annual_value for v in self.__material.values()))
+        return -(sum(v.annual_value for v in self.__material.values()))
 
     @property
     def byproducts_cost(self):
         """
         :return: cost all byproducts of the process
         """
-        return abs(sum(v.annual_value for v in self.__byproducts.values()))
+        return -(sum(v.annual_value for v in self.__byproducts.values()))
 
     @property
     def products_value(self):
@@ -376,14 +409,17 @@ class FactoryProcess:
         a product line revenue: products - material - byproducts - utility...
         :return:
         """
-        return self.products_value - self.material_cost - self.byproducts_cost - self.utilities_cost
+        revenue = self.products_value - self.material_cost - self.byproducts_cost - self.utilities_cost
+        # convert the revenue
+        value_unit = self.products[self.__ref_product_chem_id].currency
+        return round(UnitConversion.convert(revenue, value_unit, MEGA+value_unit, "CURRENCY"), NUM_DIGITS)
 
     @property
     def utilities_cost(self):
         """
         :return: cost of all utilities
         """
-        return sum(u.annual_value for u in self.__utility.values())
+        return -sum(u.annual_value for u in self.__utility.values())
 
     @property
     def factory_process_json(self):
@@ -395,9 +431,9 @@ class FactoryProcess:
                                   'inlet_T': self.inlet_temperature, 'inlet_P': self.inlet_pressure,
                                   'conversion': self.conversion},
                 'products': [p.component_json for p in self.__products.values()],
-                'by-products': [p.component_json for p in self.__byproducts.values()],
+                'by_products': [p.component_json for p in self.__byproducts.values()],
                 'material': [p.component_json for p in self.__material.values()],
-                'emissions': self.__emission,
+                'emissions': [p.component_json for p in self.__emission.values()],
                 'utilities': [p.component_json for p in self.__utility.values()],
                 'process_annual_revenue': self.revenue_per_year
                 }

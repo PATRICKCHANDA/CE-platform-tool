@@ -3,7 +3,8 @@ from services.load_data import DataLoader
 
 app = Flask(__name__)
 factories = {}
-
+all_chemicals = {}
+all_reactions = {}
 
 @app.route('/')
 def index():
@@ -24,6 +25,16 @@ def get_factory():
             return jsonify(feature_collection)
         else:
             print("factories is NONE.")
+
+
+@app.route('/getAllReactions')
+def get_all_reaction_formula():
+    return jsonify([(rf_id, rf.json_format) for rf_id, rf in all_reactions.items()])
+
+
+@app.route('/getAllChemicals')
+def get_all_chemicals():
+    return jsonify([(chem_id, chem.json_format) for chem_id, chem in all_chemicals.items()])
 
 
 @app.route('/getFactoryProducts/<int:factory_id>')
@@ -53,6 +64,8 @@ def close_db(exception):
 
 def app_init():
     global factories
+    global all_reactions
+    global all_chemicals
     db_loader = get_db()    # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     print("[Info]: reading public chemicals...ready")
@@ -75,3 +88,7 @@ if __name__ == '__main__':
     # app_init()
     app.run(host='0.0.0.0', debug=True)
     # host 0.0.0.0 means it is accessable from any device on the network
+
+
+# todo: added value per unit material
+# todo: added value/unit material

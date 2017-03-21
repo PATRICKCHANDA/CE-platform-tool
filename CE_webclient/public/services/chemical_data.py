@@ -21,3 +21,10 @@ class Chemical:
     @property
     def name(self):
         return self.__name_cn + "(" + self.__name_en + ")"
+
+    @property
+    def json_format(self):
+        return {"name": self.name,
+                "value_per_unit": self.unit_cost,
+                "currency": self.currency
+                }

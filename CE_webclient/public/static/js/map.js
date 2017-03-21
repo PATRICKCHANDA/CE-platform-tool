@@ -45,30 +45,8 @@ $(document).ready(function () {
 //    };
 //    L.geoJSON(data).addTo(mymap);
     loadGeometries(mymap);
-//    $.getJSON(url_get_factory)
-//    .done(function (data) {
-//        L.geoJson(data).addTo(mymap);
-//    })
-//    .fail(function (status, err) {
-//        console.log("Error: Failed to load factories from DB.");
-//    })
-    /*  DOM layout of the modalDiaglog showing the object Properties
-    DOM
-        - div
-        - div
-        - table
-            - thead
-                - tr
-                    -th th
-            - tbody
-                - tr
-                    -td td td
-                - tr
-                    -td td td
-        - div
-          - button button  button
-        - div
-    */
+    loadAllChemicals();
+    loadAllReactions();
     $("#btn_full_view").on('click', function() {
         changeLayout(true);
         mymap.invalidateSize();
@@ -79,6 +57,23 @@ $(document).ready(function () {
     // todo: load all chemical information
 });
 
+function loadAllReactions() {
+    $.getJSON(url_get_reactions)
+    .done(function (data) {
+    })
+    .fail(function (status, err) {
+        console.log("Error: Failed to load reactions from DB.");
+    })
+}
+
+function loadAllChemicals() {
+    $.getJSON(url_get_chemicals)
+    .done(function (data) {
+    })
+    .fail(function (status, err) {
+        console.log("Error: Failed to load chemicals from DB.");
+    })
+}
 // query the database to get the factories, buildings, rails, roads. And display them in the map
 function loadGeometries(mymap) {
     // get the GeoJSON from the database
@@ -87,8 +82,6 @@ function loadGeometries(mymap) {
         L.geoJSON(data, {
             onEachFeature: onEachFeature
         }).addTo(mymap);
-
-
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load factories from DB.");

@@ -1,11 +1,16 @@
 class RFComponent:
     def __init__(self, info):
-        if __debug__:
-            self.chemical_id = info.GetField('chemical_id')
+        self.chemical_id = info.GetField('chemical_id')
         self.reaction_formula_id = info.GetField('reaction_formula_id')
         self.unit = info.GetField('unit')
         if self.unit != 'moles':
             print("[WARNING]: unit in reaction_reactant table should be moles. Further calculation will use moles!")
+
+    @property
+    def json_format(self):
+        return {"chem_id": self.chemical_id,
+                "unit": self.unit
+                }
 
 
 class RFProduct(RFComponent):
@@ -55,3 +60,12 @@ class ReactionFormula:
             self.__products[chemical_id] = RFProduct(info)
         else:
             self.__reactants[chemical_id] = RFReactant(info)
+
+    @property
+    def json_format(self):
+        return {"name": self.name,
+                "temperature": self.temperature,
+                "pressure": self.pressure,
+                "reactants": [r.json_format for r in self.__reactants.values()],
+                "products": [p.json_format for p in self.__products.values()]
+                }

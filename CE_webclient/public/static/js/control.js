@@ -11,9 +11,13 @@ function collapse() {
         $("#analysis-col").toggleClass("col-md-4");
 }
 
-// when click on the collapse button, collapse the the page
+//! change the page layout
 function changeLayout(btn_clicked) {
+    // when click on the collapse button, toggle the the page
+    // when click on the layer feature, always open the info block or keep the info block open
     if (btn_clicked || ! $('#map-col').hasClass("col-md-4")) {
+        $("#btn_full_view > i").toggleClass("fa-plus-circle");
+        $("#btn_full_view > i").toggleClass("fa-minus-circle");
         collapse();
     }
 }

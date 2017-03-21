@@ -6,6 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../static/css/styles.css">
     <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">-->
@@ -14,9 +15,13 @@
 <body>
     <div class="container-fluid main_container">
         <div id="title-row" class="row justify-content-center">
-            <button id="btn_full_view">Back</button>
-            <div class="col-sm-12" align="center">
+            <div class="col-sm-11" align="center">
                 <h1>高栏港循环经济工具平台</h1>
+            </div>
+            <div class="col-sm-1" align="right">
+                <button id="btn_full_view" class="btn-sm" align="right">
+                    <i class="fa fa-plus-circle fa-1x" aria-hidden="true"></i>
+                </button>
             </div>
         </div>
         <!-- contains the map area, info and analysis -->
@@ -24,21 +29,32 @@
             <div class="col-md-12" id="map-col" >Gaolan Area</div>
             <div class="collapse" id="info-col">
                 <div class="row" id="factory_processes_info">
-                    <label class="col-sm-2">产品名称(product):</label>
-                    <select class="col-sm-6 dropdown-menu"></select>
+                    <label class="col-sm-4">产品名称(product):</label>
+                    <select class="col-sm-6"></select>
+                </div>
+                <div class="row" id="factory_product_income">
+                    <label class="col-sm-4">产品收入(revenue):</label>
+                    <h5 class="col-sm-6"></h5>
+                </div>
+                <div class="row" id="factory_product_profit">
+                    <label class="col-sm-4">产品净收入(margin):</label>
+                    <h5 class="col-sm-6"></h5>
                 </div>
                 <div class="panel panel-info" id="process_input">
-                    <div class="panel-heading">基本输入信息</div>
-                    <table></table>
+                    <div class="panel-heading"><i class="fa fa-table" aria-hidden="true"></i>基本输入信息(basis)</div>
+                    <table class="table table-striped"></table>
                 </div>
                 <div class="row" id="material">
-                    <table>material table</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>原材料信息(material)</table>
                 </div>
                 <div class="row" id="emission">
-                    <table>emision table</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>排放信息(emission)</table>
                 </div>
                 <div class="row" id="utilities">
-                    <table>utilities table</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>基础设施(utilities)</table>
+                </div>
+                <div class="row" id="byproducts">
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>副产品(byproducts)</table>
                 </div>
             </div>
             <div class="collapse" id="analysis-col">Analysis</div>

@@ -5,14 +5,21 @@ class UnitConversion:
     QUALITY = 'QUALITY'
     TIME = 'TIME'
     ENERGY = 'ENERGY'
+    CURRENCY = "CURRENCY"
     LinearConversionTable = dict()
     LinearConversionTable[QUALITY] = dict()
     LinearConversionTable[TIME] = dict()
     LinearConversionTable[ENERGY] = dict()
+    LinearConversionTable[CURRENCY] = dict()
+
+    LinearConversionTable[CURRENCY]["eur"] = 1
+    LinearConversionTable[CURRENCY]["rmb"] = 7
+    LinearConversionTable[CURRENCY]["meur"] = 1E6
 
     LinearConversionTable[QUALITY]['g'] = 1
     LinearConversionTable[QUALITY]['kg'] = 1E3
     LinearConversionTable[QUALITY]['t'] = 1E6
+
     LinearConversionTable[TIME]["s"] = 1
     LinearConversionTable[TIME]["m"] = 60
     LinearConversionTable[TIME]["min"] = 60
