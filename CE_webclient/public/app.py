@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, redirect, url_for, request, make_response, g
 from services.load_data import DataLoader
+from services.ce_analysis import create_2D_array
 
 app = Flask(__name__)
 factories = {}
@@ -78,6 +79,10 @@ def app_init():
 
     # get factories
     factories = db_loader.get_factories()
+
+    # construct a 2D array
+    create_2D_array(factories, all_chemicals, all_utility_info, all_emission_data)
+
     # get products, byproducts and emission of all factories
     db_loader.get_factories_products(factories, all_reactions, all_chemicals, all_emission_data)
     # get utilities of all factories

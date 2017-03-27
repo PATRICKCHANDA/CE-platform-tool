@@ -59,9 +59,9 @@ insert into gaolanport.factory_reaction_utility values(2,1,5,null,null,null);
 -- gaolanport.factory_emission
 
 -- gaolanport.factory (via QGIS)
-insert into gaolanport.factory values(1, 'power plant', 'utility provider', '');
+insert into gaolanport.factory values(1, 'power plant', 'infrastructure', '');
 insert into gaolanport.factory values(2, 'BP factory', 'petrochemical', '');
-insert into gaolanport.factory values(3, 'waste treament', 'utility provider', '');
+insert into gaolanport.factory values(3, 'waste treament', 'infrastructure', '');
 
 -- change column type
 -- alter table public.reaction_reactant alter column quantity type text using cast(quantity as text);

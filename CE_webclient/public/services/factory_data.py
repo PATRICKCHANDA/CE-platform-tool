@@ -13,7 +13,7 @@ class ProcessComponent:
         """
         :param comp_id: chemical_id / utility_type_id
         :param mps: moles per second
-        :param quantity:
+        :param quantity: annual quantity
         :param quantity_unit:
         :param name:
         :param unit_value: value per unit
@@ -274,6 +274,7 @@ class FactoryProcess:
             molar_mass_kg = UnitConversion.convert(chem_info.molar_mass, 'g', 'kg', 'QUALITY')
             # sum the volume flow of the material
             try:
+                # unit: m3/hr
                 volume_flow += material.moles_per_second * molar_mass_kg * 3600 / chem_info.density
                 # sum the thermal mass
                 heat_thermal_mass += UnitConversion.convert(
@@ -290,10 +291,11 @@ class FactoryProcess:
 
         # compressor sizing, 1 bars = 100 Kpa
         tmp = HEAT_CAPACITY_RATIO / (HEAT_CAPACITY_RATIO - 1)
+        # unit: KJ
         Pad = 2.78 * 1E-4 * volume_flow * self.inlet_pressure * 100 * tmp * \
               (pow(self.rf_info.pressure / self.inlet_pressure, 1.0/tmp) - 1)
         # step 0: get the amount
-        # electricity
+        # electricity: units/sec
         electricity = UnitConversion.convert(Pad, 'kJ', 'kWh', 'ENERGY')
         # heat reaction
         c = self.conversion     # c is used in the self.rf_info.heat_reaction_formula
@@ -312,7 +314,7 @@ class FactoryProcess:
             utility_name = an_utility_info.name_en.lower().strip()
             currency_unit = an_utility_info.currency
             if utility_name == "electricity":
-                self.__utility[obj_id] = ProcessComponent(obj_id, None, electricity,
+                self.__utility[obj_id] = ProcessComponent(obj_id, None, electricity * self.production_time,
                                                           an_utility_info.unit,
                                                           an_utility_info.name,
                                                           an_utility_info.unit_cost,
@@ -326,7 +328,7 @@ class FactoryProcess:
                                 * self.production_time
                 self.__utility[obj_id] = ProcessComponent(obj_id,
                                                           None,
-                                                          heat_reaction,
+                                                          heat_reaction * self.production_time,
                                                           an_utility_info.unit,
                                                           an_utility_info.name,
                                                           an_utility_info.unit_cost,
@@ -336,7 +338,7 @@ class FactoryProcess:
             elif utility_name == "heat thermal":
                 self.__utility[obj_id] = ProcessComponent(obj_id,
                                                           None,
-                                                          heat_thermal_mass,
+                                                          heat_thermal_mass * self.production_time,
                                                           an_utility_info.unit,
                                                           an_utility_info.name,
                                                           an_utility_info.unit_cost,
@@ -347,7 +349,7 @@ class FactoryProcess:
             elif utility_name == "make up water":
                 self.__utility[obj_id] = ProcessComponent(obj_id,
                                                           None,
-                                                          make_up_water,
+                                                          make_up_water * self.production_time,
                                                           an_utility_info.unit,
                                                           an_utility_info.name,
                                                           an_utility_info.unit_cost,
@@ -358,7 +360,7 @@ class FactoryProcess:
             elif utility_name == "water treatment":
                 self.__utility[obj_id] = ProcessComponent(obj_id,
                                                           None,
-                                                          water_treatment,
+                                                          water_treatment * self.production_time,
                                                           an_utility_info.unit,
                                                           an_utility_info.name,
                                                           an_utility_info.unit_cost,

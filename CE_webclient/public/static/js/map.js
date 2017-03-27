@@ -60,6 +60,8 @@ $(document).ready(function () {
 function loadAllReactions() {
     $.getJSON(url_get_reactions)
     .done(function (data) {
+        if (data.length > 0)
+            display_all_reactions(data);
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load reactions from DB.");
@@ -69,6 +71,8 @@ function loadAllReactions() {
 function loadAllChemicals() {
     $.getJSON(url_get_chemicals)
     .done(function (data) {
+        if (data.length > 0)
+            display_all_chemicals(data);
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load chemicals from DB.");
