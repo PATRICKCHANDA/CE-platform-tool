@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, redirect, url_for, request, make_response, g
 from services.load_data import DataLoader
-from services.ce_analysis import create_2D_array
+from services.ce_analysis import CEAnalysis, SHORT_NAME_FACTORY, SHORT_NAME_EMISSION, \
+    SHORT_NAME_UTILITY_TYPE, SHORT_NAME_CHEMICAL
 
 app = Flask(__name__)
 factories = {}
@@ -10,6 +11,36 @@ all_reactions = {}
 @app.route('/')
 def index():
     return render_template("index.html")
+
+
+@app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
+def calc_factory_productline(factory_id, rf_id):
+    """
+    (re)calculate a factory's one product line, including the material, byproducts, emissions, utilities
+    :param factory_id: 
+    :param rf_id: reaction_formula_id
+    :return: 
+    """
+    content = request.get_json()
+    print(content)
+    if factory_id not in factories:
+        return jsonify({"error": "unknown factory_id " + str(factory_id)})
+    if rf_id not in factories[factory_id].factory_product_lines:
+        return jsonify({"error": "unknown reaction_formula_id " + str(rf_id) + " in factory " + str(factory_id)})
+    product_id = content['id']
+    a_process = factories[factory_id].factory_product_lines[rf_id]
+    if product_id not in a_process.products:
+        return jsonify({"error": "unknown product_id " + product_id + " in reaction_formula " + str(
+            rf_id) + " of factory " + str(factory_id)})
+
+    # update the factory product_line information
+    a_process.days_of_production = content['DOP']
+    a_process.hours_of_production = content['HOP']
+    a_process.conversion = content['conversion']
+    a_process.products[product_id].quantity = content['quantity']
+    # do calculation
+
+    return jsonify({'status': 'received'})
 
 
 # http://stackoverflow.com/questions/32288722/call-python-function-from-js
@@ -79,15 +110,35 @@ def app_init():
 
     # get factories
     factories = db_loader.get_factories()
-
-    # construct a 2D array
-    create_2D_array(factories, all_chemicals, all_utility_info, all_emission_data)
-
     # get products, byproducts and emission of all factories
     db_loader.get_factories_products(factories, all_reactions, all_chemicals, all_emission_data)
     # get utilities of all factories
     db_loader.get_factories_utilities(factories, all_utility_info, all_chemicals)
     db_loader.close()
+
+    # construct a analyzer
+    analyzer = CEAnalysis(factories, all_chemicals, all_utility_info, all_emission_data)
+    # fill in the data
+    for factory_id, factory in factories.items():
+        for rf_id, product_line in factory.factory_product_lines.items():
+            info = product_line.factory_process_json
+            # factory products
+            for product in info['products']:
+                # get product object_id
+                analyzer.set_value(factory_id, product['id'], SHORT_NAME_CHEMICAL, product['quantity'])
+            # by-products
+            for byproduct in info['by_products']:
+                analyzer.set_value(factory_id, byproduct['id'], SHORT_NAME_CHEMICAL, byproduct['quantity'])
+            # material
+            for material in info['material']:
+                analyzer.set_value(factory_id, material['id'], SHORT_NAME_CHEMICAL, -material['quantity'])
+            # utilities
+            # todo: factory may provide utility services,
+            for utility in info['utilities']:
+                analyzer.set_value(factory_id, utility['id'], SHORT_NAME_UTILITY_TYPE, -utility['quantity'])
+            # emissions
+            for emission in info['emissions']:
+                analyzer.set_value(factory_id, emission['name'], SHORT_NAME_EMISSION, emission['quantity'])
 
 if __name__ == '__main__':
     # app_init()

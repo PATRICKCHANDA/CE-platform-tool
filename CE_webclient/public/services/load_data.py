@@ -5,7 +5,8 @@ from services.chemical_data import Chemical
 from services.emission_data import EmissionData
 from services.utility_type import UtilityType
 from services.reaction_formula import ReactionFormula
-from services.ce_analysis import CEAnalysis
+from services.ce_analysis import CEAnalysis, SHORT_NAME_FACTORY, SHORT_NAME_EMISSION, \
+    SHORT_NAME_UTILITY_TYPE, SHORT_NAME_CHEMICAL
 
 try:
     from osgeo import osr, ogr, gdal
@@ -146,7 +147,7 @@ class DataLoader:
     def get_emission_data(self):
         """
         read the public.emission_data table information and save into 2 dictionary
-        :return: ({reaction_formula_id: list of EmissionData}, {object_id:rf_id}
+        :return: {reaction_formula_id: list of EmissionData}
         """
         sql = "select * from " + DataLoader.lyr_emission_data
         lyr = self.conn.ExecuteSQL(sql)
@@ -322,45 +323,43 @@ class DataLoader:
             self.conn.ReleaseResultSet(lyr)
             return rt_util_types
 
-if __name__ == "__main__":
-    get_all_drivers()
-    db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
-    all_chemicals = db.get_all_chemicals()
-    all_reactions = db.get_all_reaction_formulas()
-    all_utility_info = db.get_utility_type()
-    all_emission_data = db.get_emission_data()
-
-    # get factories
-    test_factories = db.get_factories()
-
-    # get products of all factories
-    db.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
-    db.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
-    db.get_factory_products(2)
-    db.close()
-    # construct a analyzer
-    analyzer = CEAnalysis(test_factories, all_chemicals, all_utility_info, all_emission_data)
-    # fill in the data
-    for factory_id, factory in test_factories.items():
-        for rf_id, product_line in factory.factory_product_lines.items():
-            info = product_line.factory_process_json
-            # factory products
-            for product in info['products']:
-                # get product object_id
-                analyzer.set_value(factory_id, product['id'], 'c', product['quantity'])
-            # by-products
-            for byproduct in info['by_products']:
-                analyzer.set_value(factory_id, byproduct['id'], 'c', byproduct['quantity'])
-            # material
-            for material in info['material']:
-                analyzer.set_value(factory_id, material['id'], 'c', -material['quantity'])
-            # utilities
-            # todo: factory may provide utility services,
-            for utility in info['utilities']:
-                analyzer.set_value(factory_id, utility['id'], 'u', -utility['quantity'])
-            # emissions
-            for emission in info['emissions']:
-                analyzer.set_value(factory_id, emission['name'], 'e', emission['quantity'])
-    input("press any key to quit...")
-
-
+# if __name__ == "__main__":
+#     get_all_drivers()
+#     db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+#     all_chemicals = db.get_all_chemicals()          # {chemical_object_id: Chemical}
+#     all_reactions = db.get_all_reaction_formulas()  # {rf_id: ReactionFormula}
+#     all_utility_info = db.get_utility_type()        # {utility_type_object_id: UtilityType}
+#     all_emission_data = db.get_emission_data()      # {rf_id: EmissionData}
+#
+#     # get factories
+#     test_factories = db.get_factories()
+#
+#     # get products of all factories
+#     db.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
+#     db.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
+#     db.get_factory_products(2)
+#     db.close()
+#     # construct a analyzer
+#     analyzer = CEAnalysis(test_factories, all_chemicals, all_utility_info, all_emission_data)
+#     # fill in the data
+#     for factory_id, factory in test_factories.items():
+#         for rf_id, product_line in factory.factory_product_lines.items():
+#             info = product_line.factory_process_json
+#             # factory products
+#             for product in info['products']:
+#                 # get product object_id
+#                 analyzer.set_value(factory_id, product['id'], 'c', product['quantity'])
+#             # by-products
+#             for byproduct in info['by_products']:
+#                 analyzer.set_value(factory_id, byproduct['id'], 'c', byproduct['quantity'])
+#             # material
+#             for material in info['material']:
+#                 analyzer.set_value(factory_id, material['id'], 'c', -material['quantity'])
+#             # utilities
+#             # todo: factory may provide utility services,
+#             for utility in info['utilities']:
+#                 analyzer.set_value(factory_id, utility['id'], 'u', -utility['quantity'])
+#             # emissions
+#             for emission in info['emissions']:
+#                 analyzer.set_value(factory_id, emission['name'], 'e', emission['quantity'])
+#     input("press any key to quit...")

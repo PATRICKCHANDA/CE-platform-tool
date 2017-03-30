@@ -43,18 +43,22 @@
                 <div class="panel panel-info" id="process_input">
                     <div class="panel-heading"><i class="fa fa-table" aria-hidden="true"></i>基本输入信息(basis)</div>
                     <table class="table table-striped"></table>
+                    <button id="btn_confirm_change_input" type="button" class="btn btn-secondary">
+                        <i class="fa fa-check" aria-hidden="true"></i>确认修改
+                    </button>
                 </div>
+                <br>
                 <div class="row" id="material">
-                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>原材料信息(material)</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>原材料信息(material)</strong></table>
                 </div>
                 <div class="row" id="emission">
-                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>排放信息(emission)</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>排放信息(emission)</strong></table>
                 </div>
                 <div class="row" id="utilities">
-                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>基础设施(utilities)</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>基础设施(utilities)</strong></table>
                 </div>
                 <div class="row" id="byproducts">
-                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i>副产品(byproducts)</table>
+                    <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>副产品(byproducts)</strong></table>
                 </div>
             </div>
             <div class="collapse" id="analysis-col">Analysis</div>
@@ -70,6 +74,8 @@
     <script src="../static/js/map.js"></script>
     <script src="../static/js/control.js"></script>
     <script src="../static/js/factory_process.js"></script>
+    <script src="../static/js/chemicals.js"></script>
+    <script src="../static/js/reaction_formulas.js"></script>
 
     <!--<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tether.min.js') }}"></script>

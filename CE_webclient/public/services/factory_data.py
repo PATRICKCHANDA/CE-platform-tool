@@ -98,7 +98,7 @@ class ProcessProduct(ProcessComponent):
     def calculate_materials(self, material, conversion, production_time, a_reaction_formula, chemicals_info):
         """
         calculate the necessary materials(quantity, cost(value)) for this product
-        :param material: dictionary
+        :param material: dictionary to store the added material details
         :param conversion: conversion value for product
         :param production_time: time of production (default: seconds)
         :param a_reaction_formula: instance of class ReactionFormula
@@ -139,6 +139,9 @@ class ProcessProduct(ProcessComponent):
                                                 -annual_cost
                                                 )
 
+    # todo: only update, no creation of Material instance
+    def update(self):
+        pass
 
 class FactoryProcess:
     """
@@ -165,7 +168,7 @@ class FactoryProcess:
         self.__utility = {}         # {utility_type_id: ProcessComponent instance}
         self.__emission = {}        # {name: quantity}
         # indicate the material is already added, if true, when the next product added for this process, we do not need
-        # to calculate the material again! So, different products of the process share the same material!
+        # to calculate the material again! So, different products of the ONE process share the same material!
         # Only calculate once!
         self.__material_added = False
 
@@ -526,7 +529,7 @@ class Factory:
 
     def store_utilities(self, a_rf_id, utility_obj_id):
         """
-        store the utilities that a process is used by the factory, no calculation!
+        store the utilities types that a process is used by the factory, no calculation yet
         :param a_rf_id:
         :param utility_obj_id:
         :return:
@@ -551,6 +554,7 @@ class Factory:
     @property
     def factory_revenue(self):
         """
+        sum of revenue per product line
         :return: total revenue of the factory
         """
         rt_value = 0

@@ -16,12 +16,18 @@
 import numpy as np
 import itertools
 
+SHORT_NAME_CHEMICAL = 'c'
+SHORT_NAME_UTILITY_TYPE = 'u'
+SHORT_NAME_EMISSION = 'e'
+SHORT_NAME_FACTORY = 'f'
+
 
 class CEAnalysis:
     OFFSET_FACTORY = 0
     OFFSET_CHEMICAL = 10000000
     OFFSET_UTILITY_TYPE = 20000000
     OFFSET_EMISSION = 30000000
+    PREFIX_EMISSION = 'emis_'
 
     def __init__(self, all_factory, all_chemical, all_utility_type, all_emission):
         """
@@ -67,7 +73,7 @@ class CEAnalysis:
         # emission
         for emission_per_rf in all_emission.values():
             for emission_data in emission_per_rf:
-                emission_name = 'emis_' + emission_data.name
+                emission_name = CEAnalysis.PREFIX_EMISSION + emission_data.name
                 if emission_name not in self.dict_obj_id_2_index:
                     index = next(col_index)
                     self.dict_obj_id_2_index[emission_name] = index
@@ -79,24 +85,24 @@ class CEAnalysis:
         # create the 2D array
         self.A = np.zeros((n_rows, n_cols), dtype=np.float64)
 
-    def get_factory_id_by_index(self, index):
-        object_id = self.dict_row_index_2_obj_id.get(index)
+    def get_factory_id_by_index(self, row_index):
+        object_id = self.dict_row_index_2_obj_id.get(row_index)
         return object_id
 
-    def get_object_id_by_index(self, index):
+    def get_object_id_by_index(self, col_index):
         """       
-        :param index: column index of the 2D array
-        :param name: 'f' for factory, 'e' for emission, 'c' for chemical, 'u' for utility
+        :param col_index: column index of the 2D array
         :return: object_id from the database, which is used as dictionary key in their container respectively
         """
-        object_id = self.dict_col_index_2_obj_id.get(index)
+        object_id = self.dict_col_index_2_obj_id.get(col_index)
         if type(object_id) is int:
             if CEAnalysis.OFFSET_CHEMICAL < object_id < CEAnalysis.OFFSET_UTILITY_TYPE:
-                return object_id, 'c'
+                return object_id, SHORT_NAME_CHEMICAL
             elif CEAnalysis.OFFSET_UTILITY_TYPE < object_id < CEAnalysis.OFFSET_EMISSION:
-                return object_id, 'u'
+                return object_id, SHORT_NAME_UTILITY_TYPE
         else:
-            return object_id[5:], 'e'
+            # since the column name for emission starts with 'emis_', so we return a substring of the column name
+            return object_id[5:], SHORT_NAME_EMISSION
 
     def get_index_by_id(self, object_id, name):
         """
@@ -105,14 +111,14 @@ class CEAnalysis:
         :return: index of one axis of the 2D array 
         """
         unique_obj_id = object_id
-        if name.lower() == "c":
+        if name.lower() == SHORT_NAME_CHEMICAL:
             unique_obj_id += CEAnalysis.OFFSET_CHEMICAL
-        elif name.lower() == "f":
+        elif name.lower() == SHORT_NAME_FACTORY:
             unique_obj_id += CEAnalysis.OFFSET_FACTORY
-        elif name.lower() == "u":
+        elif name.lower() == SHORT_NAME_UTILITY_TYPE:
             unique_obj_id += CEAnalysis.OFFSET_UTILITY_TYPE
-        elif name.lower() == "e":
-            unique_obj_id = 'emis_' + object_id
+        elif name.lower() == SHORT_NAME_EMISSION:
+            unique_obj_id = CEAnalysis.PREFIX_EMISSION + object_id
         else:
             print("[Warning]: unknown name", name)
             return None
@@ -130,7 +136,7 @@ class CEAnalysis:
         :param value: 
         :return: 
         """
-        row_index = self.get_index_by_id(factory_obj_id, 'f')
+        row_index = self.get_index_by_id(factory_obj_id, SHORT_NAME_FACTORY)
         col_index = self.get_index_by_id(col_object_id, name)
         self.A[row_index, col_index] += value
 
