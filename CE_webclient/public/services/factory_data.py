@@ -29,6 +29,28 @@ class ProcessComponent:
         self.value_per_unit = value_per_unit
         self.currency = currency    # currency symbol
 
+    def update(self, comp_id, mps, quantity, quantity_unit, value_per_unit, currency, value):
+        """
+        update the component information
+        :param comp_id: 
+        :param mps: 
+        :param quantity: 
+        :param quantity_unit: 
+        :param value_per_unit: 
+        :param currency: 
+        :param value: 
+        :return: 
+        """
+        if comp_id != self.component_id:
+            return False
+        self.moles_per_second = mps
+        self.quantity = quantity    # Tonnes/year
+        self.quantity_unit = quantity_unit
+        self.annual_value = value   # < 0 means cost of buy, > 0 means profit
+        self.value_per_unit = value_per_unit
+        self.currency = currency    # currency symbol
+        return True
+
     @property
     def component_json(self):
         if self.currency is None:
@@ -95,7 +117,7 @@ class ProcessProduct(ProcessComponent):
                                                    self.quantity_unit,
                                                    'QUALITY') * self.quantity
 
-    def calculate_materials(self, material, conversion, production_time, a_reaction_formula, chemicals_info):
+    def calculate_materials(self, material, conversion, production_time, a_reaction_formula, chemicals_info, update=False):
         """
         calculate the necessary materials(quantity, cost(value)) for this product
         :param material: dictionary to store the added material details
@@ -103,18 +125,20 @@ class ProcessProduct(ProcessComponent):
         :param production_time: time of production (default: seconds)
         :param a_reaction_formula: instance of class ReactionFormula
         :param chemicals_info: dictionary of all chemicals
-        :return:
+        :param update: if true, create new ProcessMaterial instance, otherwise update the existing ProcessMaterial
+        :return: boolean
         """
         # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
         # step 0. convert the product quantity from unit(here is T)/year to moles/s
         self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
                            / (chemicals_info[self.component_id].molar_mass * production_time)
-        # step 1. get the reactants info from the reaction_formula
+        # step 1. loop through all the reactants info from the reaction_formula, they are all materials!
         for chem_id, reactant in a_reaction_formula.reactants.items():
             if chem_id not in chemicals_info:
                 print("[ERROR] in function calculate_material(): Unknown chemical [", chem_id, "] in the database")
                 continue
             chem_info = chemicals_info[chem_id]
+            # this variable is use by eval() function and should be called 'c'
             c = conversion
             formula = reactant.quantity_ratio
             # calculate the moles/s for the reactant using the ratio formula from database
@@ -128,6 +152,10 @@ class ProcessProduct(ProcessComponent):
             annual_cost = UnitConversion.convert(chem_info.unit_cost,
                                                  chem_info.unit,
                                                  self.quantity_unit, 'QUALITY') * annual_quantity
+            if update and chem_id not in material:
+                print("[ERROR]: Failed to update material ", chem_info.name, " for reaction ",
+                      a_reaction_formula.name)
+                return False
             # add into material container
             material[chem_id] = ProcessMaterial(chem_id,
                                                 chem_info.name,
@@ -138,10 +166,8 @@ class ProcessProduct(ProcessComponent):
                                                 chem_info.currency,
                                                 -annual_cost
                                                 )
+        return True
 
-    # todo: only update, no creation of Material instance
-    def update(self):
-        pass
 
 class FactoryProcess:
     """
@@ -201,16 +227,18 @@ class FactoryProcess:
                                           self.conversion,
                                           self.production_time,
                                           self.rf_info,
-                                          all_chem_info
+                                          all_chem_info,
+                                          False # creation
                                           )
             # set material is added
             self.__material_added = True
         self.__products[product_chemical_id] = a_product
 
-    def add_byproducts(self, all_chem_info):
+    def calculate_byproducts(self, all_chem_info, update=False):
         """
         add byproducts for this process, different products of the process share the same material
         :param all_chem_info:
+        :param update: if true, check whether the byproduct already added
         :return: list of byproducts name
         """
         # step 0. get all the products info from the reaction_formula, the reaction_product with quantity is '1' moles
@@ -223,7 +251,7 @@ class FactoryProcess:
         for chem_id, rf_product in self.rf_info.products.items():
             # check
             if chem_id not in all_chem_info:
-                print("[ERROR] in function add_byproducts(): Unknown chemical [", chem_id, "] in the database")
+                print("[ERROR] in function calculate_byproducts(): Unknown chemical [", chem_id, "] in the database")
 
             # chem_id not in the products(which means it is not in the factory_reaction_product table,
             # then consider it as byproduct
@@ -241,6 +269,10 @@ class FactoryProcess:
                 # convert the unit_cost in chemical into the cost of the unit of the product * quantity
                 annual_cost = UnitConversion.convert(chem_info.unit_cost, chem_info.unit,
                                                      a_product.quantity_unit, 'QUALITY') * annual_quantity
+
+                if update and chem_id not in self.__byproducts:
+                    print("[ERROR]: Failed to update byproduct ", chem_info.name, " for reaction ", self.rf_name)
+                    return None
                 # save as ProcessByProduct
                 self.__byproducts[chem_id] = ProcessByProduct(chem_id,
                                                               chem_info.name,
@@ -254,21 +286,26 @@ class FactoryProcess:
                 byproduct_names.append(all_chem_info[chem_id].name)
         return byproduct_names
 
-    def calculate_process_emission(self, emission_data):
+    def calculate_process_emission(self, emission_data, update=False):
         """
         calculate the process emission based on the emission_data
         :param emission_data: list of EmissionData instance
+        :param update: if True, check whether the emission already added
         :return:
         """
         if self.__ref_product_chem_id is not None:
             a_product = self.__products[self.__ref_product_chem_id]
             for emis_data in emission_data:
+                if update and emis_data.name not in self.__emission:
+                    print("[ERROR]: Failed to update emission ", emis_data.name, " for reaction ", self.rf_name)
+                    return False
                 self.__emission[emis_data.name] = ProcessComponent(-1, None, emis_data.total * a_product.quantity,
                                                                    a_product.quantity_unit,
                                                                    emis_data.name,
                                                                    None, None)
+            return True
 
-    # todo: need validation by collega's and the structure and data may be changed!
+    # todo: utility calculation needs validation by collega's and the structure and data may be changed!
     def calculate_process_utilities(self, all_utility_info, all_chem_info):
         volume_flow = 0
         heat_thermal_mass = 0
@@ -373,6 +410,43 @@ class FactoryProcess:
                                                           )
             else:
                 print("[Warning:] Unknown ", utility_name)
+        return True
+
+    def update_process_line(self, contents, product_chemical_id, all_utility_info, all_chem_info, emission_data):
+        """       
+        update the whole process's products, byproducts, materials, utilities, emissions
+        :param contents
+        :param product_chemical_id: 
+        :param all_utility_info: dictionary of utility_type info
+        :param all_chem_info: 
+        :param emission_data: emission data for a specific reaction_formula
+        :return: 
+        """
+        # update the process info
+        self.days_of_production = contents['DOP']
+        self.hours_of_production = contents['HOP']
+        self.conversion = contents['conversion']
+        if product_chemical_id not in self.__products:
+            return [False, "unknown product_id " + product_chemical_id + " in reaction_formula " + self.rf_name]
+        a_product = self.__products[product_chemical_id]
+        # 1. update product quantity
+        a_product.quantity = contents['quantity']
+        # 2. update product value
+        a_product.calculate_product_value(all_chem_info[product_chemical_id])
+        # 3. update material consumption
+        succeed = a_product.calculate_materials(self.__material, self.conversion, self.production_time, self.rf_info,
+                                                all_chem_info, True)
+        if not succeed: return [False, 'Failed to update material']
+        # 4. update emission
+        succeed = self.calculate_process_emission(emission_data, True)
+        if not succeed: return [False, 'Failed to update emission']
+        # 5. update utilities consumption
+        succeed = self.calculate_process_utilities(all_utility_info, all_chem_info)
+        if not succeed: return [False, 'Failed to update utility']
+        # 6. update byproducts
+        succeed = self.calculate_byproducts(all_chem_info, True)
+        if not succeed: return [False, 'Failed to update byproducts']
+        return [True]
 
     @property
     def products(self):
@@ -499,18 +573,14 @@ class Factory:
 
     def calculate_byproducts_per_product_line(self, chemicals_info):
         """
-        calculate byproducts per product line in the factory
+        calculate byproducts per product line in the factory, call this function only AFTER all the products
+        of the product line is calculated
         :param chemicals_info:
         :return:
         """
         for rf_id, product_line in self.factory_product_lines.items():
-            list_byproducts = product_line.add_byproducts(chemicals_info)
-            print(list_byproducts,
-                  " byproducts are added for ",
-                  product_line.rf_info.name,
-                  ' for ',
-                  self.factory_name
-                  )
+            list_byproducts = product_line.calculate_byproducts(chemicals_info)
+            print(list_byproducts, " byproducts are added for ", product_line.rf_info.name, ' for ', self.factory_name)
 
     def calculate_emission_per_product_line(self, all_emission_data):
         for rf_id, product_line in self.__product_lines.items():

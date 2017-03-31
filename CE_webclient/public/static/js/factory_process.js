@@ -46,24 +46,22 @@ function apply_model_basis_info_changes(factory_id, rf_id) {
             dataType: 'json',
             contentType: 'application/json; charset=utf-8'
         })
-        .done(function(msg) {
-            console.log( "request send: " + msg );
+        .done(function(data) {
+            console.log( "response got: " + data.msg );
         })
         .fail(function (err) {
             console.log(err)
         });
 
-//        // waiting for the results
-//        $.getJSON(url_calc_factory_productline + factory_id + "/" + rf_id)
-//        .done(function (data) {
-//            if (data.length > 0)
-//                console.log(data[0].rf_name)
-//            display_factory_processes_info(factory_id, data);
-//        })
-//        .fail (function (status, err) {
-//            console.log("Error: failed to load products from factory", feature.id);
-//        })
-        // update the tables
+        // waiting for the results
+        $.getJSON(url_get_factory_productline + factory_id + "/" + rf_id)
+        .done(function (data) {
+            display_a_product_process_details(factory_id, data);
+            // update the tables
+        })
+        .fail (function (status, err) {
+            console.log("Error: failed to load product from factory", factory_id);
+        })
     }
 }
 

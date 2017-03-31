@@ -7,6 +7,8 @@ app = Flask(__name__)
 factories = {}
 all_chemicals = {}
 all_reactions = {}
+all_utility_info = {}
+all_emission_data = {}
 
 @app.route('/')
 def index():
@@ -29,18 +31,11 @@ def calc_factory_productline(factory_id, rf_id):
         return jsonify({"error": "unknown reaction_formula_id " + str(rf_id) + " in factory " + str(factory_id)})
     product_id = content['id']
     a_process = factories[factory_id].factory_product_lines[rf_id]
-    if product_id not in a_process.products:
-        return jsonify({"error": "unknown product_id " + product_id + " in reaction_formula " + str(
-            rf_id) + " of factory " + str(factory_id)})
-
-    # update the factory product_line information
-    a_process.days_of_production = content['DOP']
-    a_process.hours_of_production = content['HOP']
-    a_process.conversion = content['conversion']
-    a_process.products[product_id].quantity = content['quantity']
-    # do calculation
-
-    return jsonify({'status': 'received'})
+    # update the specific process_line of this factory
+    results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+    if not results[0]:
+        return jsonify(msg=results[1])
+    return jsonify(msg='succeed processed')
 
 
 # http://stackoverflow.com/questions/32288722/call-python-function-from-js
@@ -69,7 +64,23 @@ def get_all_chemicals():
     return jsonify([(chem_id, chem.json_format) for chem_id, chem in all_chemicals.items()])
 
 
-@app.route('/getFactoryProducts/<int:factory_id>')
+@app.route('/getFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['GET'])
+def get_factory_product_line(factory_id, rf_id):
+    """
+    :param factory_id: 
+    :param rf_id: 
+    :return: a specific product line (process) of a specified factory  
+    """
+    if factory_id in factories and rf_id in factories[factory_id].factory_product_lines:
+        a_product = factories[factory_id].factory_product_lines[rf_id].factory_process_json
+        return jsonify(a_product)
+    else:
+        msg = "factory ", factory_id, " or reaction", rf_id, " does not exist."
+        print(msg)
+        return jsonify(None)
+
+
+@app.route('/getFactoryProductLines/<int:factory_id>')
 def get_factory_products(factory_id):
     if factory_id in factories:
         products = factories[factory_id].factory_products_json
@@ -98,6 +109,8 @@ def app_init():
     global factories
     global all_reactions
     global all_chemicals
+    global all_utility_info
+    global all_emission_data
     db_loader = get_db()    # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     print("[Info]: reading public chemicals...ready")

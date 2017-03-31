@@ -233,7 +233,8 @@ class DataLoader:
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
-            # add the factory byproducts, emission of each product line
+            # add the factory byproducts, emission of each product line, this should be done AFTER all
+            # products are calculated/added in the product line
             for factory in factories.values():
                 factory.calculate_byproducts_per_product_line(chemicals)
                 factory.calculate_emission_per_product_line(emission_info)
