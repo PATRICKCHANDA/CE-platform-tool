@@ -31,6 +31,10 @@ class RFReactant(RFComponent):
         # it is a formula to calculate # of moles in order to product 1 moles product
         self.quantity_ratio = info.GetField('quantity')
         self.__prev_reaction_formula_id = info.GetField('prev_reaction_formula_id')
+        if info.GetField('catalyst') is None or info.GetField('catalyst') == False:
+            self.is_catalyst = False
+        else:
+            self.is_catalyst = True
 
 
 class ReactionFormula:

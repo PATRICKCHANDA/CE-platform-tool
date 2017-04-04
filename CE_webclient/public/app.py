@@ -152,6 +152,8 @@ def app_init():
             # emissions
             for emission in info['emissions']:
                 analyzer.set_value(factory_id, emission['name'], SHORT_NAME_EMISSION, emission['quantity'])
+    # analyzer_json = jsonify(analyzer)
+    print(analyzer)
 
 if __name__ == '__main__':
     # app_init()

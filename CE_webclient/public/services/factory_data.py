@@ -228,7 +228,7 @@ class FactoryProcess:
                                           self.production_time,
                                           self.rf_info,
                                           all_chem_info,
-                                          False # creation
+                                          False  # creation
                                           )
             # set material is added
             self.__material_added = True
@@ -310,6 +310,9 @@ class FactoryProcess:
         volume_flow = 0
         heat_thermal_mass = 0
         for material in self.__material.values():
+            # catalyst will not be considered
+            if self.rf_info.reactants[material.component_id].is_catalyst:
+                continue
             chem_info = all_chem_info[material.component_id]
             molar_mass_kg = UnitConversion.convert(chem_info.molar_mass, 'g', 'kg', 'QUALITY')
             # sum the volume flow of the material
@@ -584,7 +587,9 @@ class Factory:
 
     def calculate_emission_per_product_line(self, all_emission_data):
         for rf_id, product_line in self.__product_lines.items():
-            product_line.calculate_process_emission(all_emission_data[rf_id])
+            # check whether there are emission data for this reaction formula
+            if rf_id in all_emission_data:
+                product_line.calculate_process_emission(all_emission_data[rf_id])
 
     def calculate_utilities_per_product_line(self, all_utility_info, all_chem_info):
         """
@@ -595,7 +600,8 @@ class Factory:
         :return:
         """
         for product_line in self.__product_lines.values():
-            product_line.calculate_process_utilities(all_utility_info, all_chem_info)
+            if len(product_line.utilities) > 0:
+                product_line.calculate_process_utilities(all_utility_info, all_chem_info)
 
     def store_utilities(self, a_rf_id, utility_obj_id):
         """

@@ -3,6 +3,7 @@
     new L.LatLng(22.000000, 113.3));
 
 var mymap = L.map('map-col', { zoomControl: false}).fitBounds(custom_bounds);
+var factory_layer;  // geojson layer containing all the factories
 
 $(document).ready(function () {
 //    mymap.crs = L.CRS.EPSG4326;
@@ -45,16 +46,18 @@ $(document).ready(function () {
 //    };
 //    L.geoJSON(data).addTo(mymap);
     loadGeometries(mymap);
+    // Todo: load all reaction_formula information
+    // todo: load all chemical information
     loadAllChemicals();
     loadAllReactions();
+    // todo: load the analysis result
+    loadCEAnalysis();
     $("#btn_full_view").on('click', function() {
         changeLayout(true);
         mymap.invalidateSize();
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
     });
 
-    // Todo: load all reaction_formula information
-    // todo: load all chemical information
 });
 
 function loadAllReactions() {
@@ -83,13 +86,16 @@ function loadGeometries(mymap) {
     // get the GeoJSON from the database
     $.getJSON(url_get_factory)
     .done(function (data) {
-        L.geoJSON(data, {
+        factory_layer = L.geoJSON(data, {
             onEachFeature: onEachFeature
         }).addTo(mymap);
+//        mymap.addLayer(factory_layer);
+
+//        markFactoryColor(1);
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load factories from DB.");
-    })
+    });
 }
 
 // for each factory polygon, get its products
@@ -121,3 +127,19 @@ function onFeatureClick(feature) {
     alert('click event: ' + feature.id)
 }
 
+function markFactoryColor(factory_id) {
+    factory_layer.eachLayer(function (layer) {
+        if (layer.feature.id == factory_id) {
+            layer.setStyle({fillColor:'#fff460', fillOpacity:1.0});
+        };
+    });
+}
+
+function resetFactoryColor(factory_id) {
+    factory_layer.eachLayer(function (layer) {
+        if (layer.feature.id == factory_id) {
+            factory_layer.resetStyle(layer);
+            break;
+        };
+    });
+}

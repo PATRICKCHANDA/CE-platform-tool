@@ -56,8 +56,10 @@ function apply_model_basis_info_changes(factory_id, rf_id) {
         // waiting for the results
         $.getJSON(url_get_factory_productline + factory_id + "/" + rf_id)
         .done(function (data) {
-            display_a_product_process_details(factory_id, data);
-            // update the tables
+            if (data)
+                // todo: update the tables
+                display_a_product_process_details(factory_id, data);
+
         })
         .fail (function (status, err) {
             console.log("Error: failed to load product from factory", factory_id);
@@ -68,9 +70,15 @@ function apply_model_basis_info_changes(factory_id, rf_id) {
 /*! \brief display ONE product line contents: material use, emission, byproducts, utilities
  */
 function display_a_product_process_details(factory_id, product_line_info) {
-    // each product_line has one product!
-    var product_info = product_line_info.products[0];
-    $("#factory_product_income > h5").text(product_info.annual_value + " "+ product_info.currency);
+    // each product_line may have more than one product!
+    var total_value = 0;
+    var total_profit = 0;
+    for (var i=0; i< product_line_info.products.length;++i) {
+        var product_info = product_line_info.products[0];
+        total_value += product_info.annual_value;
+    }
+// todo: make a drop-down list of product in the model_basis table
+    $("#factory_product_income > h5").text(total_value + " "+ product_info.currency);
     $("#factory_product_profit > h5").text(product_line_info.process_annual_revenue + " "+ product_info.currency);
     fill_model_basis_table(product_line_info.process_basis, product_info, factory_id);
     // process_info.material: array
