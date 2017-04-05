@@ -29,11 +29,11 @@
             <div class="col-md-12" id="map-col" >Gaolan Area</div>
             <div class="collapse" id="info-col">
                 <div class="row" id="factory_total_profit">
-                    <label class="col-sm-4">总净收入(margin):</label>
+                    <label class="col-sm-4">企业总净收入(margin):</label>
                     <h5 class="col-sm-6"></h5>
                 </div>
                 <div class="row" id="factory_processes_info">
-                    <label class="col-sm-4">生产工艺(product):</label>
+                    <label class="col-sm-4">生产工艺(process):</label>
                     <select class="col-sm-6"></select>
                 </div>
                 <div class="row" id="factory_product_income">
@@ -65,7 +65,16 @@
                     <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>副产品(byproducts)</strong></table>
                 </div>
             </div>
-            <div class="collapse" id="analysis-col">Analysis</div>
+            <div class="collapse" id="analysis-col">Analysis
+                <div class="panel panel-info" id="all_processes_info">
+                    <label class="col-sm-5">选择生产工艺(process):</label>
+                    <select class="col-sm-6"></select>
+                    <button id="btn_add_process_to_factory" type="button" class="btn btn-secondary">
+                        <i class="fa fa-cart-plus" aria-hidden="true"></i>添加该工艺到企业
+                    </button>
+                </div>
+                <br>
+            </div>
         </div>
     </div>
 

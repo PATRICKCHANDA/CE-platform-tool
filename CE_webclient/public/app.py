@@ -9,6 +9,8 @@ all_chemicals = {}
 all_reactions = {}
 all_utility_info = {}
 all_emission_data = {}
+analyzer = None
+
 
 @app.route('/')
 def index():
@@ -67,6 +69,22 @@ def get_all_chemicals():
     return jsonify([(chem_id, chem.json_format) for chem_id, chem in all_chemicals.items()])
 
 
+@app.route('/getFactoryIds/<int:factory_id>/<string:component_type>/<string:component_name>/<int:as_supplier>', methods=['GET'])
+def get_factory_ids_dealing_with_component(factory_id, component_type, component_name, as_supplier):
+    """
+    :param factory_id:
+    :param component_type: chemical/emission/utility
+    :param component_name: can be an id or name(emission)
+    :param as_supplier: indicate this factor supply this component, we need to find factory USE this component, 
+    or another way round.
+    :return: 
+    """
+    global analyzer
+    ids = analyzer.get_factory_ids_by_col_id(component_name, component_type[0], not as_supplier)
+    # get rid of current factory_id
+    return jsonify(ids)
+
+
 @app.route('/getFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['GET'])
 def get_factory_product_line(factory_id, rf_id):
     """
@@ -114,6 +132,7 @@ def app_init():
     global all_chemicals
     global all_utility_info
     global all_emission_data
+    global analyzer
     db_loader = get_db()    # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
     all_chemicals = db_loader.get_all_chemicals()
     print("[Info]: reading public chemicals...ready")

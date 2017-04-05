@@ -110,9 +110,17 @@ class ProcessProduct(ProcessComponent):
         """
         ProcessComponent.__init__(self, product_chem_id, 1, quantity, quantity_unit, name, value_per_unit, currency)
 
-    def calculate_product_value(self, chemical_info):
-        # kost per gram to kost per T
-        self.annual_value = UnitConversion.convert(chemical_info.unit_cost,
+    def calculate_product_value(self, chemical_info, local_unit_cost=None):
+        """       
+        :param chemical_info: 
+        :param local_unit_cost: a local price instead of global price 
+        :return: 
+        """
+        value_per_unit = chemical_info.unit_cost
+        if local_unit_cost is not None:
+            value_per_unit = local_unit_cost
+        # convert kost per gram to kost per T
+        self.annual_value = UnitConversion.convert(value_per_unit,
                                                    chemical_info.unit,
                                                    self.quantity_unit,
                                                    'QUALITY') * self.quantity
@@ -421,7 +429,7 @@ class FactoryProcess:
         """       
         update the whole process's products, byproducts, materials, utilities, emissions
         :param contents
-        :param product_chemical_id: 
+        :param product_chemical_id: id of the chemical whose quantity or other attributes have been changed
         :param all_utility_info: dictionary of utility_type info
         :param all_chem_info: 
         :param emission_data: emission data for a specific reaction_formula
@@ -435,9 +443,24 @@ class FactoryProcess:
             return [False, "unknown product_id " + product_chemical_id + " in reaction_formula " + self.rf_name]
         a_product = self.__products[product_chemical_id]
         # 1. update product quantity
+        ratio = 1.0 * contents['quantity'] / a_product.quantity
         a_product.quantity = contents['quantity']
         # 2. update product value
-        a_product.calculate_product_value(all_chem_info[product_chemical_id])
+        new_value_per_unit = contents['value_per_unit_' + str(product_chemical_id)]
+        # update the local price: the price of the component will not affect other factory having the component
+        a_product.value_per_unit = new_value_per_unit
+        a_product.calculate_product_value(all_chem_info[product_chemical_id], new_value_per_unit)
+        # updates also other products of this production line!
+        for chem_id, other_product in self.__products.items():
+            if chem_id != product_chemical_id:
+                # update quantity
+                other_product.quantity = other_product.quantity * ratio
+                # update value per unit, both in the Chemical and ProcessProduct
+                new_value_per_unit = contents['value_per_unit_' + str(chem_id)]
+                other_product.value_per_unit = new_value_per_unit
+                # recalculate the product value
+                other_product.calculate_product_value(all_chem_info[chem_id], new_value_per_unit)
+
         # 3. update material consumption
         succeed = a_product.calculate_materials(self.__material, self.conversion, self.production_time, self.rf_info,
                                                 all_chem_info, True)

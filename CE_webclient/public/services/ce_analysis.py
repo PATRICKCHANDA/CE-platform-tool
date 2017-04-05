@@ -108,11 +108,11 @@ class CEAnalysis:
     def __generate_unique_obj_id(object_id, name):
         unique_obj_id = object_id
         if name.lower() == SHORT_NAME_CHEMICAL:
-            unique_obj_id += CEAnalysis.OFFSET_CHEMICAL
+            unique_obj_id = CEAnalysis.OFFSET_CHEMICAL + int(object_id)
         elif name.lower() == SHORT_NAME_FACTORY:
-            unique_obj_id += CEAnalysis.OFFSET_FACTORY
+            unique_obj_id = CEAnalysis.OFFSET_FACTORY + int(object_id)
         elif name.lower() == SHORT_NAME_UTILITY_TYPE:
-            unique_obj_id += CEAnalysis.OFFSET_UTILITY_TYPE
+            unique_obj_id = CEAnalysis.OFFSET_UTILITY_TYPE + int(object_id)
         elif name.lower() == SHORT_NAME_EMISSION:
             unique_obj_id = CEAnalysis.PREFIX_EMISSION + object_id
         else:
@@ -133,20 +133,26 @@ class CEAnalysis:
             raise ValueError("[Error]: no index found for " + str(unique_obj_id))
         return index
 
-    def get_factory_ids_by_col_id(self, col_object_id, name):
+    def get_factory_ids_by_col_id(self, col_object_id, component_type_name, larger_than_zero):
         """
         with a known col_object_id, indicating as a chemical, emis, utility, return a list of factory id's
         :param col_object_id: 
-        :param name: 
+        :param component_type_name: 
         :return: a list of factory_id which produce/supply the chemical or service indicated by the col_object_id
         """
-        col_index = self.get_index_by_id(col_object_id, name)
+        col_index = self.get_index_by_id(col_object_id, component_type_name)
         # in the array column, get all the entries whose value > 0, which means the factory produce/supply
         # this product or service
         a_column = self.A[:, col_index]
-        row_indices = np.where(a_column > 0)
-        factory_ids = [self.get_factory_id_by_index(i) for i in np.nditer(row_indices)]
-        return factory_ids
+        if larger_than_zero:
+            row_indices = np.where(a_column > 0)
+        else:
+            row_indices = np.where(a_column < 0)
+        if len(row_indices[0]) > 0:
+            factory_ids = [self.get_factory_id_by_index(i.item(0)) for i in np.nditer(row_indices[0])]
+            return factory_ids
+        else:
+            return []
 
     def set_value(self, factory_obj_id, col_object_id, name, value):
         """       

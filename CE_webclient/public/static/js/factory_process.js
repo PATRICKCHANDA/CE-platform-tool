@@ -17,19 +17,59 @@ $("#btn_confirm_change_input").on("click", function() {
     apply_model_basis_info_changes(g_factory_id, rf_id, profit_of_other_processes);
 });
 
+/*  \brief react on the name click event!
+ \param factory_id
+ \param component_id_or_name: for emission, it is a string value, for others, it is an ID
+ \param as_supplier: if true, this factory is the supplier, we want to find the factory consume this component
+                     if false, this factory is the comsumer, we want to find the factory supply this component
+ \param data_url: contains factory_id/component_type/component_name/as_supplier
+ */
+function name_click_handler(data_url) {
+    resetFactoryColor();
+    // waiting for the results
+    $.getJSON(url_get_factory_ids_dealing_with_component + data_url)
+    .done(function (data) {
+        if (data) {
+            // show them in a table
+            // mark those factories in the map
+            for (var i = 0; i < data.length; ++i)
+                markFactoryColor(data[i]);
+        }           
+    })
+    .fail(function (status, err) {
+        console.log("Error: failed to load factory supplying or comsuming the component", factory_id);
+    })
+
+}
+
 /*! \brief create a new row in the table and add contents into the row
  \param contents: array of data
  \param value_editable: array of boolean
  \param contents_id: array of string used as id for <td>
+ \param compoent_type: value as emission, chemical, utility
+ \param is_supplier: boolean
  */
-function add_a_table_row(a_table_body, contents, value_editable, contents_id) {
+function add_a_table_row(a_table_body, contents, value_editable, contents_id, component_type, is_supplier) {
     var aRow = a_table_body.appendChild(document.createElement('tr'));
     for (var i = 0; i < contents.length; ++i) {
         editable = value_editable[i];
-        if (!editable)
-            aRow.appendChild($('<td>' + contents[i] + '</td>').get(0));
+        if (!editable) {
+            var aCell = aRow.appendChild($('<td>' + contents[i] + '</td>').get(0));
+            // if it has contents_id, then this cell is clickable
+            if (contents_id[i] != null && contents_id[i] != '') {
+                if (component_type) {
+                    aCell.innerText = '';
+                    alink = aCell.appendChild($("<a href='#'>" + contents[i] + "</a>").get(0));
+                    alink.data = g_factory_id + "/" + component_type + "/" + contents_id[i] + "/" + (+is_supplier);
+                    alink.onclick = function (e) {
+                        //console.log(e.target.data);
+                        name_click_handler(e.target.data);
+                    }
+                }
+            }
+        }
         else
-            aRow.appendChild($('<td class="bg-info" contenteditable="true" id='+ contents_id[i] + '>' + contents[i] + '</td>').get(0));
+            aRow.appendChild($('<td class="bg-info" contenteditable="true" id=' + contents_id[i] + '>' + contents[i] + '</td>').get(0));
     }
 }
 
@@ -42,9 +82,13 @@ function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_proce
     var request_content = {};
     var all_rows = $("#process_input > table tbody tr");
     if (all_rows.length > 0) {
-        // the first row: cell 1 with id as chem_id, value is the quantity
+        // the first row: cell 1 with id as chem_id, value is the quantity, otherwise we will get sth. like 2:100000, hard to use on server side
         request_content.id = parseInt(all_rows[0].cells[1].id);
         request_content.quantity = Number(all_rows[0].cells[1].innerHTML);
+        price_name = all_rows[0].cells[3].id;
+        price_value = Number(all_rows[0].cells[3].innerHTML);
+        request_content[price_name] = price_value;
+        //request_content.
         // other rows
         for (var r = 1; r < all_rows.length; ++r) {
             var row = all_rows[r];
@@ -97,6 +141,8 @@ function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_proce
  */
 function display_a_product_process_details(factory_id, product_line_info) {
     // each product_line may have more than 1 product!
+    // the total revenue of a specified product line, a factory may contain more than 1 product line
+    // and a product_line may contain more than 1 product!
     var total_value = 0;
     var value_unit = "";
     for (var i=0; i< product_line_info.products.length;++i) {
@@ -104,12 +150,11 @@ function display_a_product_process_details(factory_id, product_line_info) {
         total_value += product_info.annual_value;
         value_unit = product_info.currency;
     }
-// todo: make a drop-down list of product in the model_basis table
+
     $("#factory_product_income > h5").text(total_value + " "+ value_unit);
-    // the total revenue of a specified product line, a factory may contain more than 1 product line
-    // and a product_line may contain more than 1 product!
     $("#factory_product_profit > h5").text(product_line_info.process_annual_revenue + " "+ product_line_info.revenue_unit);
-    fill_model_basis_table(product_line_info.process_basis,product_line_info.products, factory_id);
+
+    fill_model_basis_table(product_line_info.process_basis, product_line_info.products, factory_id);
     // process_info.material: array
     fill_material_table(product_line_info.material);
     // process_info.emissions: object
@@ -159,8 +204,9 @@ function display_factory_processes_info(factory_id, data) {
 }
 
 /*! \brief a general add contents to table function
+ \param component_type: chemical, utility, emission or factory
  */
-function fill_table_content(a_table, info) {
+function fill_table_content(a_table, info, component_type, is_supplier) {
     // clear the current table content
     a_table.find("tr").remove();
     if (info.length > 0) {
@@ -175,7 +221,8 @@ function fill_table_content(a_table, info) {
             add_a_table_row(tblbody,
                 [an_item.name, an_item.quantity, an_item.value_per_unit, an_item.annual_value],
                 [false, false, true, false],
-                ['', '', 'value_per_unit', '']
+                [an_item.id, '', 'value_per_unit_' + an_item.id, ''],
+                component_type, is_supplier
             );
         }
     }
@@ -184,7 +231,7 @@ function fill_table_content(a_table, info) {
 function fill_byproducts_table(byproducts_info) {
     // insert into table
     $table = $("#byproducts > table");
-    fill_table_content($table, byproducts_info);
+    fill_table_content($table, byproducts_info, "chemical", true);
 }
 
 function fill_emission_table(emission_info) {
@@ -197,7 +244,7 @@ function fill_emission_table(emission_info) {
         $table.append('<thead><tr><th>名称</th><th>年排放量(单位: '+ quantity_unit +')</th></tr></thead>');
         var tblbody = $table.get(0).appendChild(document.createElement('tbody'));
         for (var i=0; i < emission_info.length; ++i) {
-            add_a_table_row(tblbody, [emission_info[i].name, emission_info[i].quantity], [false, false]);
+            add_a_table_row(tblbody, [emission_info[i].name, emission_info[i].quantity], [false, false], [emission_info[i].name, ''], "emission", true);
         }
     }
 }
@@ -205,7 +252,7 @@ function fill_emission_table(emission_info) {
 function fill_material_table(material_info) {
     // insert into table
     $table = $("#material > table");
-    fill_table_content($table, material_info);
+    fill_table_content($table, material_info, "chemical", false);
 }
 
 /*
@@ -231,7 +278,8 @@ function fill_model_basis_table(process_basis_info, products_info, factory_id) {
         add_a_table_row(tblbody,
             [products_info[i].name, products_info[i].quantity, products_info[i].unit, products_info[i].value_per_unit, products_info[i].currency_value_per_unit],
             [false, i==0?true:false, false, true, false],
-            ['', products_info[i].id, '', 'value_per_unit', '']
+            [products_info[i].id, products_info[i].id, '', 'value_per_unit_' + products_info[i].id, ''],
+            'chemical', true
         );
     }
 //    add_a_table_row(tblbody,
@@ -239,9 +287,9 @@ function fill_model_basis_table(process_basis_info, products_info, factory_id) {
 //        [false, true, false],
 //        ['', 'value_per_unit', '']
 //    );
-    add_a_table_row(tblbody, ["年生产天数", days_production, "天"], [false, true, false], ['', 'DOP', '']);
-    add_a_table_row(tblbody, ["生产小时数/天", hours_production, "小时"], [false, true, false], ['', 'HOP', '']);
-    add_a_table_row(tblbody, ["转换效率(0~1)", conversion, "-"], [false, true, false], ['', 'conversion', '']);
+    add_a_table_row(tblbody, ["年生产天数", days_production, "天"], [false, true, false], ['', 'DOP', ''], null, null);
+    add_a_table_row(tblbody, ["生产小时数/天", hours_production, "小时"], [false, true, false], ['', 'HOP', ''], null, null);
+    add_a_table_row(tblbody, ["转换效率(0~1)", conversion, "-"], [false, true, false], ['', 'conversion', ''], null, null);
 //    add_a_table_row(tblbody, ["入口压力", inlet_pressure, "bar"], [false, true, false]);
 //    add_a_table_row(tblbody, ["入口温度", inlet_temperature, "C"], [false, true, false]);
     // todo: add basic reaction_formula information
@@ -262,7 +310,8 @@ function fill_utilities_table(utility_info) {
             add_a_table_row(tblbody,
                 [utility_info[i].name, utility_info[i].quantity, utility_info[i].unit, utility_info[i].value_per_unit, utility_info[i].annual_value],
                 [false, false, false, true, false],
-                ['', '', '', 'value_per_unit', '']
+                [utility_info[i].id, '', '', 'value_per_unit', ''],
+                "utility", false // use those utilities
             );
         }
     }

@@ -7,7 +7,7 @@ insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'EU
 insert into public.chemical values(6, 'Ammonia', '氨', 18, 0,'NH3','T', 100, 0, 'EUR', NULL);
 insert into public.chemical values(7, 'Ethanolamines', '单乙醇胺', 61, 0,'NH2CH2CH2OH','T', 1000, 0, 'EUR', NULL);
 insert into public.chemical values(8, 'Di-Triethaolamines', '二-三乙醇胺', 115, 0,'DEA,TEA','T', 500, 0, 'EUR', NULL);
-insert into public.chemical values(9, 'p-xylene(PX)',           '对二甲苯', 106, 1.26, 'C8H10', 'T',593,0,'EUR',1530);
+insert into public.chemical values(9, 'p-xylene(PX)',       '对二甲苯', 106, 1.26, 'C8H10', 'T',593,0,'EUR',1530);
 insert into public.chemical values(10, 'air',               '空气',    28.84, 1.4, '',        'T', 0, 0, 'EUR', 900);
 insert into public.chemical values(11, 'Acetic acid',       '乙酸',    60,    0, 'CH3COOH', 'T', 300, 0, 'EUR', NULL);
 insert into public.chemical values(12, 'normal water',      '普通水',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL);

@@ -45,18 +45,20 @@ $(document).ready(function () {
 //	              ]
 //    };
 //    L.geoJSON(data).addTo(mymap);
-    loadGeometries(mymap);
-    // Todo: load all reaction_formula information
-    // todo: load all chemical information
-    loadAllChemicals();
-    loadAllReactions();
-    // todo: load the analysis result
-    loadCEAnalysis();
     $("#btn_full_view").on('click', function() {
         changeLayout(true);
         mymap.invalidateSize();
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
     });
+
+    loadGeometries(mymap);
+    // todo: load all chemical information
+    loadAllChemicals();
+    // Todo: load all reaction_formula information
+    loadAllReactions();
+    // todo: load the analysis result
+    //loadCEAnalysis();
+
 
 });
 
@@ -119,6 +121,7 @@ function onEachFeature(feature, layer) {
         .fail (function (status, err) {
             console.log("Error: failed to load products from factory", feature.id);
         })
+        resetFactoryColor();
     });
 }
 
@@ -141,5 +144,11 @@ function resetFactoryColor(factory_id) {
             factory_layer.resetStyle(layer);
             break;
         };
+    });
+}
+
+function resetFactoryColor() {
+    factory_layer.eachLayer(function (layer) {
+        factory_layer.resetStyle(layer);
     });
 }
