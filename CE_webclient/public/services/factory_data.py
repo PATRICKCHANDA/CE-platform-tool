@@ -284,7 +284,7 @@ class FactoryProcess:
                                                               -annual_cost
                                                               )
                 byproduct_names.append(all_chem_info[chem_id].name)
-        return byproduct_names
+        return byproduct_names, True
 
     def calculate_process_emission(self, emission_data, update=False):
         """
@@ -307,6 +307,8 @@ class FactoryProcess:
 
     # todo: utility calculation needs validation by collega's and the structure and data may be changed!
     def calculate_process_utilities(self, all_utility_info, all_chem_info):
+        if self.__utility is None or  len(self.__utility) == 0:
+            return True
         volume_flow = 0
         heat_thermal_mass = 0
         for material in self.__material.values():
@@ -441,13 +443,14 @@ class FactoryProcess:
                                                 all_chem_info, True)
         if not succeed: return [False, 'Failed to update material']
         # 4. update emission
-        succeed = self.calculate_process_emission(emission_data, True)
+        if emission_data is not None:
+            succeed = self.calculate_process_emission(emission_data, True)
         if not succeed: return [False, 'Failed to update emission']
         # 5. update utilities consumption
         succeed = self.calculate_process_utilities(all_utility_info, all_chem_info)
         if not succeed: return [False, 'Failed to update utility']
         # 6. update byproducts
-        succeed = self.calculate_byproducts(all_chem_info, True)
+        succeed = self.calculate_byproducts(all_chem_info, True)[1]
         if not succeed: return [False, 'Failed to update byproducts']
         return [True]
 
@@ -494,7 +497,7 @@ class FactoryProcess:
         revenue = self.products_value - self.material_cost - self.byproducts_cost - self.utilities_cost
         # convert the revenue
         value_unit = self.products[self.__ref_product_chem_id].currency
-        return round(UnitConversion.convert(revenue, value_unit, MEGA+value_unit, "CURRENCY"), NUM_DIGITS)
+        return round(UnitConversion.convert(revenue, value_unit, MEGA+value_unit, "CURRENCY"), NUM_DIGITS), MEGA+value_unit
 
     @property
     def utilities_cost(self):
@@ -517,7 +520,8 @@ class FactoryProcess:
                 'material': [p.component_json for p in self.__material.values()],
                 'emissions': [p.component_json for p in self.__emission.values()],
                 'utilities': [p.component_json for p in self.__utility.values()],
-                'process_annual_revenue': self.revenue_per_year
+                'process_annual_revenue': self.revenue_per_year[0],
+                'revenue_unit': self.revenue_per_year[1]
                 }
 
 
@@ -582,7 +586,7 @@ class Factory:
         :return:
         """
         for rf_id, product_line in self.factory_product_lines.items():
-            list_byproducts = product_line.calculate_byproducts(chemicals_info)
+            list_byproducts = product_line.calculate_byproducts(chemicals_info)[0]
             print(list_byproducts, " byproducts are added for ", product_line.rf_info.name, ' for ', self.factory_name)
 
     def calculate_emission_per_product_line(self, all_emission_data):
@@ -600,8 +604,7 @@ class Factory:
         :return:
         """
         for product_line in self.__product_lines.values():
-            if len(product_line.utilities) > 0:
-                product_line.calculate_process_utilities(all_utility_info, all_chem_info)
+            product_line.calculate_process_utilities(all_utility_info, all_chem_info)
 
     def store_utilities(self, a_rf_id, utility_obj_id):
         """
@@ -635,8 +638,9 @@ class Factory:
         """
         rt_value = 0
         for product_line in self.__product_lines.values():
-            rt_value += product_line.revenue_per_year
-        return rt_value
+            rt_value += product_line.revenue_per_year[0]
+            value_unit = product_line.revenue_per_year[1]
+        return rt_value, value_unit
 
     @property
     def factory_basic_info_json(self):
@@ -660,4 +664,10 @@ class Factory:
         """
         :return: all the factory product processes
         """
-        return [(rf_id, product.factory_process_json) for rf_id, product in self.__product_lines.items()]
+        results = {'total_profit': self.factory_revenue[0],
+                   'profit_unit': self.factory_revenue[1],
+                   'product_lines': []
+                  }
+        for rf_id, product in self.__product_lines.items():
+            results['product_lines'].append((rf_id, product.factory_process_json))
+        return results

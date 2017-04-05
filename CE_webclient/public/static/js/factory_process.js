@@ -1,3 +1,22 @@
+var g_factory_id;
+
+//! button onClick event handler to submit the changes and update the results in the webpage
+$("#btn_confirm_change_input").on("click", function() {
+    // get the current rf_id from the drop-down box
+    var rf_id = $("#factory_processes_info > select").val();
+    // get the total profit of the factory
+    total_profit = $("#factory_total_profit > h5").text();
+    // get rid of the unit
+    var pos = total_profit.indexOf(" ");
+    total_profit = total_profit.substr(0, pos);
+    // get the profit of current product_line
+    product_line_profit = $("#factory_product_profit > h5").text();
+    pos = product_line_profit.indexOf(" ");
+    product_line_profit = product_line_profit.substr(0, pos);
+    var profit_of_other_processes = Number(total_profit) - Number(product_line_profit);
+    apply_model_basis_info_changes(g_factory_id, rf_id, profit_of_other_processes);
+});
+
 /*! \brief create a new row in the table and add contents into the row
  \param contents: array of data
  \param value_editable: array of boolean
@@ -16,8 +35,9 @@ function add_a_table_row(a_table_body, contents, value_editable, contents_id) {
 
 /*! \brief get the table "process_input" changed value,
            submit the changes, get the results from server and update the results in the current page
+ \param profit_of_other_processes: total profit of all processes exclude current process
  */
-function apply_model_basis_info_changes(factory_id, rf_id) {
+function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_processes) {
     // read the table, loop through each tr
     var request_content = {};
     var all_rows = $("#process_input > table tbody tr");
@@ -57,7 +77,11 @@ function apply_model_basis_info_changes(factory_id, rf_id) {
         $.getJSON(url_get_factory_productline + factory_id + "/" + rf_id)
         .done(function (data) {
             if (data)
-                // todo: update the tables
+                // update the total factory profit
+                factory_total_profit = profit_of_other_processes + data.process_annual_revenue
+                value_unit = data.revenue_unit
+                $("#factory_total_profit > h5").text(factory_total_profit + " " + value_unit);
+                // todo: for performance -> update the tables instead of clear then rebuild the table
                 display_a_product_process_details(factory_id, data);
 
         })
@@ -68,19 +92,24 @@ function apply_model_basis_info_changes(factory_id, rf_id) {
 }
 
 /*! \brief display ONE product line contents: material use, emission, byproducts, utilities
+ \param factory_id:
+ \param product_line_info: 1 product line information including product(s), byproduct(s), material, emission
  */
 function display_a_product_process_details(factory_id, product_line_info) {
-    // each product_line may have more than one product!
+    // each product_line may have more than 1 product!
     var total_value = 0;
-    var total_profit = 0;
+    var value_unit = "";
     for (var i=0; i< product_line_info.products.length;++i) {
-        var product_info = product_line_info.products[0];
+        var product_info = product_line_info.products[i];
         total_value += product_info.annual_value;
+        value_unit = product_info.currency;
     }
 // todo: make a drop-down list of product in the model_basis table
-    $("#factory_product_income > h5").text(total_value + " "+ product_info.currency);
-    $("#factory_product_profit > h5").text(product_line_info.process_annual_revenue + " "+ product_info.currency);
-    fill_model_basis_table(product_line_info.process_basis, product_info, factory_id);
+    $("#factory_product_income > h5").text(total_value + " "+ value_unit);
+    // the total revenue of a specified product line, a factory may contain more than 1 product line
+    // and a product_line may contain more than 1 product!
+    $("#factory_product_profit > h5").text(product_line_info.process_annual_revenue + " "+ product_line_info.revenue_unit);
+    fill_model_basis_table(product_line_info.process_basis,product_line_info.products, factory_id);
     // process_info.material: array
     fill_material_table(product_line_info.material);
     // process_info.emissions: object
@@ -95,26 +124,33 @@ function display_a_product_process_details(factory_id, product_line_info) {
            add the products into the drop-down list, and display the details of the first product
 */
 function display_factory_processes_info(factory_id, data) {
+    // set the global variable
+    g_factory_id = factory_id;
+    factory_total_profit = data['total_profit'];
+
+    // show total profit of the factory
+    $("#factory_total_profit > h5").text(factory_total_profit + " " + data['profit_unit']);
     // clear any previous options
     $("#factory_processes_info > select").empty();
 
     // display all the product line's product in a drop-down box
     var product_processes = "";
-    for (var i=0; i < data.length; ++i) {
-        rf_id = data[i][0];  // reaction_formula id
-        process_name = data[i][1].rf_name
+    var product_lines = data['product_lines'];
+    for (var i=0; i < product_lines.length; ++i) {
+        rf_id = product_lines[i][0];  // reaction_formula id
+        process_name = product_lines[i][1].rf_name
         product_processes += '<option value="' + rf_id + '">' + process_name + '</option>'
     }
     $("#factory_processes_info > select").append(product_processes);
 
     // bind a event handler for the drop-down box
     $("#factory_processes_info > select").on('change', function() {
-        product_process_change_handler(factory_id, this.value, data);
+        product_process_change_handler(factory_id, this.value, product_lines);
     });
 
-    if (data.length > 0)
+    if (product_lines.length > 0)
         // display ONLY one factory's product line, even this factory has more than 1 product line
-        display_a_product_process_details(factory_id, data[0][1]);
+        display_a_product_process_details(factory_id, product_lines[0][1]);
     else {// clear all data
         $("#info-col table tr").remove();
         $("#factory_product_income > h5").text("");
@@ -172,7 +208,13 @@ function fill_material_table(material_info) {
     fill_table_content($table, material_info);
 }
 
-function fill_model_basis_table(process_basis_info, product_info, factory_id) {
+/*
+ \param process_basis_info: information of the process, such days/hours of production, temperature, pressure, etc
+ \param products_info: array of products
+ \param factory_id: unique object_id of the factory in the database
+ \param profit_of_other_processes: total profit except the current product_line
+*/
+function fill_model_basis_table(process_basis_info, products_info, factory_id) {
     $table = $("#process_input > table");
     // clear the current table content
     $table.find("tr").remove();
@@ -181,18 +223,22 @@ function fill_model_basis_table(process_basis_info, product_info, factory_id) {
     var conversion = process_basis_info.conversion;
     var inlet_pressure = process_basis_info.inlet_P;
     var inlet_temperature = process_basis_info.inlet_T;
-    $table.append('<thead><tr class="table-info"><th>名称</th><th>数值每年</th><th>单位</th></tr></thead>');
+    $table.append('<thead><tr class="table-info"><th>名称</th><th>数值每年</th><th>单位</th><th>单位价格</th><th>价格单位</th></tr></thead>');
     var tblbody = $table.get(0).appendChild(document.createElement('tbody'));
-    add_a_table_row(tblbody,
-        [product_info.name, product_info.quantity, product_info.unit],
-        [false, true, false],
-        ['', product_info.id, '']
-    );
-    add_a_table_row(tblbody,
-        ["单位成本", product_info.value_per_unit, product_info.currency_value_per_unit],
-        [false, true, false],
-        ['', 'value_per_unit', '']
-    );
+    for (var i=0; i <products_info.length; ++i) {
+        // for multiple products of 1 product line, user can only edit the quantity of 1 product
+        // because other products will be change during the calculation and displayed again
+        add_a_table_row(tblbody,
+            [products_info[i].name, products_info[i].quantity, products_info[i].unit, products_info[i].value_per_unit, products_info[i].currency_value_per_unit],
+            [false, i==0?true:false, false, true, false],
+            ['', products_info[i].id, '', 'value_per_unit', '']
+        );
+    }
+//    add_a_table_row(tblbody,
+//        ["单位成本", product_info.value_per_unit, product_info.currency_value_per_unit],
+//        [false, true, false],
+//        ['', 'value_per_unit', '']
+//    );
     add_a_table_row(tblbody, ["年生产天数", days_production, "天"], [false, true, false], ['', 'DOP', '']);
     add_a_table_row(tblbody, ["生产小时数/天", hours_production, "小时"], [false, true, false], ['', 'HOP', '']);
     add_a_table_row(tblbody, ["转换效率(0~1)", conversion, "-"], [false, true, false], ['', 'conversion', '']);
@@ -200,12 +246,6 @@ function fill_model_basis_table(process_basis_info, product_info, factory_id) {
 //    add_a_table_row(tblbody, ["入口温度", inlet_temperature, "C"], [false, true, false]);
     // todo: add basic reaction_formula information
 
-    //! button onclick event handler to submit the changes and update the results in the webpage
-    $("#btn_confirm_change_input").on("click", function() {
-        // get the current rf_id from the drop-down box
-        var rf_id = $("#factory_processes_info > select").val();
-        apply_model_basis_info_changes(factory_id, rf_id)
-    })
 }
 
 function fill_utilities_table(utility_info) {

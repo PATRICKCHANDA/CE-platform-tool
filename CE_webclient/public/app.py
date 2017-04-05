@@ -32,7 +32,10 @@ def calc_factory_productline(factory_id, rf_id):
     product_id = content['id']
     a_process = factories[factory_id].factory_product_lines[rf_id]
     # update the specific process_line of this factory
-    results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+    if rf_id in all_emission_data:
+        results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+    else:
+        results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
     if not results[0]:
         return jsonify(msg=results[1])
     return jsonify(msg='succeed processed')
