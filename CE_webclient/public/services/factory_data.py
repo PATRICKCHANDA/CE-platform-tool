@@ -77,6 +77,13 @@ class ProcessComponent:
                     'currency': new_currency_unit
                     }
 
+    def calculate_quantity(self, molar_mass, production_time):
+        self.quantity = UnitConversion.convert(molar_mass * self.moles_per_second * production_time,
+                                               'g', self.quantity_unit, 'QUALITY')
+    def calculate_moles_per_second(self, molar_mass, production_time):
+        self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
+        / (molar_mass * production_time)
+
 
 class ProcessByProduct(ProcessComponent):
     """
@@ -125,9 +132,10 @@ class ProcessProduct(ProcessComponent):
                                                    self.quantity_unit,
                                                    'QUALITY') * self.quantity
 
-    def calculate_materials(self, material, conversion, production_time, a_reaction_formula, chemicals_info, update=False):
+    def calculate_materials(self, mps, material, conversion, production_time, a_reaction_formula, chemicals_info, update=False):
         """
         calculate the necessary materials(quantity, cost(value)) for this product
+        :param mps: moles per second of the REFERENCE product
         :param material: dictionary to store the added material details
         :param conversion: conversion value for product
         :param production_time: time of production (default: seconds)
@@ -138,8 +146,7 @@ class ProcessProduct(ProcessComponent):
         """
         # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
         # step 0. convert the product quantity from unit(here is T)/year to moles/s
-        self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
-                           / (chemicals_info[self.component_id].molar_mass * production_time)
+        self.calculate_moles_per_second(chemicals_info[self.component_id].molar_mass, production_time)
         # step 1. loop through all the reactants info from the reaction_formula, they are all materials!
         for chem_id, reactant in a_reaction_formula.reactants.items():
             if chem_id not in chemicals_info:
@@ -150,7 +157,7 @@ class ProcessProduct(ProcessComponent):
             c = conversion
             formula = reactant.quantity_ratio
             # calculate the moles/s for the reactant using the ratio formula from database
-            moles_reactant = eval(formula) * self.moles_per_second
+            moles_reactant = eval(formula) * mps
             # convert moles/s to unit/year
             annual_quantity = UnitConversion.convert(chem_info.molar_mass * moles_reactant * production_time,
                                                      'g',
@@ -193,9 +200,6 @@ class FactoryProcess:
         self.__level_reactions = kwargs['level_R']
         self.conversion = kwargs['conversion']
         self.percent_heat_removed_by_cooling_tower = kwargs['perc_heat_removed']
-        # reference product chem id: in the DB, one of ReactionFormula's products has quantity equal to '1',
-        # and all other products' quantity of this RF is based on the reference product
-        self.__ref_product_chem_id = None
         self.__products = dict()    # contains ProcessProduct per reaction_formula {chemical_id, ProcessProduct}
         self.__byproducts = {}      # {chemical_id: ProcessByProduct instance}
         self.__material = {}        # {chemical_id: ProcessMaterial instance}
@@ -205,33 +209,61 @@ class FactoryProcess:
         # to calculate the material again! So, different products of the ONE process share the same material!
         # Only calculate once!
         self.__material_added = False
+        # reference product chem id: in the DB, one of ReactionFormula's products has quantity equal to '1',
+        # and all other products' quantity of this RF is based on the reference product
+        self.__ref_product = None
+        self.__ref_product_chem_id = None
+        for chem_id, detail in self.rf_info.products.items():
+            if detail.quantity == '1':
+                self.__ref_product_chem_id = chem_id
+                break
+        if self.__ref_product_chem_id is None:
+            raise ValueError("Cannot find a reference product in the defined process.")
 
-    def add_product(self, product_chemical_id, quantity, unit, all_chem_info):
+    def add_product(self, product_chemical_id, quantity, unit, all_chem_info, new_product_line):
         """
         create a ProcessProduct, and calculate its value and also required material information
         :param product_chemical_id:
         :param quantity:
         :param unit: quantity unit
         :param all_chem_info: dictionary of all chemical
+        :param new_product_line: True means the product line existed, the new product_chemical_id's quantity
+                                 should consistent with the reference product of this process
         :return:
         """
-        # add the desired product of this reaction
+        if not new_product_line and self.__ref_product is None:
+            raise ValueError("No existed reference product in the product line")
+
+        curt_chem_info = all_chem_info[product_chemical_id]
         a_product = ProcessProduct(product_chemical_id,
                                    quantity,
                                    unit,
-                                   all_chem_info[product_chemical_id].name,
-                                   all_chem_info[product_chemical_id].unit_cost,
-                                   all_chem_info[product_chemical_id].currency
+                                   curt_chem_info.name,
+                                   curt_chem_info.unit_cost,
+                                   curt_chem_info.currency
                                    )
-        # determine the reference product: to be used when calculate byproducts, since in the DB, all other products
-        # of this reaction is based on the reference product
-        if self.rf_info.products[product_chemical_id].quantity == '1':
-            self.__ref_product_chem_id = product_chemical_id
+        a_product.calculate_moles_per_second(curt_chem_info.molar_mass, self.production_time)
+
+        # create the reference product: to be used when calculate byproducts, since in the DB,
+        # all other products/emission/utility/material of this reaction is based on the reference product
+        if self.__ref_product is None:
+            ref_chem_info = all_chem_info[self.__ref_product_chem_id]
+            self.create_a_reference_product(a_product, ref_chem_info, product_chemical_id, quantity, unit)
+
+        # if this product is an existed process, then the ref_product should already be created
+        if not new_product_line:
+            # update the moles per second to consistent with reference
+            c = self.conversion
+            formula = self.rf_info.products[product_chemical_id].quantity
+            a_product.moles_per_second = self.__ref_product.moles_per_second * eval(formula)
+            # update its quantity
+            a_product.calculate_quantity(curt_chem_info.molar_mass, self.production_time)
 
         a_product.calculate_product_value(all_chem_info[product_chemical_id])
         if not self.__material_added:
             # get the by-products of this reaction formula
-            a_product.calculate_materials(self.__material,
+            a_product.calculate_materials(self.__ref_product.moles_per_second,
+                                          self.__material,
                                           self.conversion,
                                           self.production_time,
                                           self.rf_info,
@@ -242,6 +274,23 @@ class FactoryProcess:
             self.__material_added = True
         self.__products[product_chemical_id] = a_product
 
+    def create_a_reference_product(self, a_product, ref_chem_info, product_chemical_id, quantity, unit):
+        self.__ref_product = ProcessProduct(self.__ref_product_chem_id,
+                                            quantity,
+                                            unit,
+                                            ref_chem_info.name,
+                                            ref_chem_info.unit_cost,
+                                            ref_chem_info.currency
+                                            )
+        if self.__ref_product_chem_id != product_chemical_id:
+            c = self.conversion
+            formula = self.rf_info.products[product_chemical_id].quantity
+            # calculate moles per second for the reference product in this product line
+            self.__ref_product.moles_per_second = a_product.moles_per_second / eval(formula)
+            # and update the quantity
+            self.__ref_product.calculate_quantity(ref_chem_info.molar_mass, self.production_time)
+            self.__ref_product.calculate_product_value(ref_chem_info)
+
     def calculate_byproducts(self, all_chem_info, update=False):
         """
         add byproducts for this process, different products of the process share the same material
@@ -251,7 +300,7 @@ class FactoryProcess:
         """
         # step 0. get all the products info from the reaction_formula, the reaction_product with quantity is '1' moles
         # is the reference product, since the quantity of all other products is based on this
-        a_product = self.__products[self.__ref_product_chem_id]
+        a_product = self.__ref_product
 
         # step 1. take one product from this FactoryProcess(reaction formula), if not a product, then it is a
         # byproduct
@@ -302,7 +351,7 @@ class FactoryProcess:
         :return:
         """
         if self.__ref_product_chem_id is not None:
-            a_product = self.__products[self.__ref_product_chem_id]
+            a_product = self.__ref_product
             for emis_data in emission_data:
                 if update and emis_data.name not in self.__emission:
                     print("[ERROR]: Failed to update emission ", emis_data.name, " for reaction ", self.rf_name)
@@ -352,7 +401,7 @@ class FactoryProcess:
         electricity = UnitConversion.convert(Pad, 'kJ', 'kWh', 'ENERGY')
         # heat reaction
         c = self.conversion     # c is used in the self.rf_info.heat_reaction_formula
-        heat_reaction = UnitConversion.convert(eval(self.rf_info.heat_reaction_formula) * self.__products[self.__ref_product_chem_id].moles_per_second,
+        heat_reaction = UnitConversion.convert(eval(self.rf_info.heat_reaction_formula) * self.__ref_product.moles_per_second,
                                                'kJ', 'kWh', 'ENERGY')
         # make up water
         make_up_water = UnitConversion.convert(self.percent_heat_removed_by_cooling_tower * (abs(heat_reaction) + abs(heat_thermal_mass)),
@@ -462,8 +511,8 @@ class FactoryProcess:
                 other_product.calculate_product_value(all_chem_info[chem_id], new_value_per_unit)
 
         # 3. update material consumption
-        succeed = a_product.calculate_materials(self.__material, self.conversion, self.production_time, self.rf_info,
-                                                all_chem_info, True)
+        succeed = a_product.calculate_materials(self.__ref_product.moles_per_second, self.__material, self.conversion,
+                                                self.production_time, self.rf_info, all_chem_info, True)
         if not succeed: return [False, 'Failed to update material']
         # 4. update emission
         if emission_data is not None:
@@ -519,7 +568,7 @@ class FactoryProcess:
         """
         revenue = self.products_value - self.material_cost - self.byproducts_cost - self.utilities_cost
         # convert the revenue
-        value_unit = self.products[self.__ref_product_chem_id].currency
+        value_unit = self.__ref_product.currency
         return round(UnitConversion.convert(revenue, value_unit, MEGA+value_unit, "CURRENCY"), NUM_DIGITS), MEGA+value_unit
 
     @property
@@ -583,7 +632,9 @@ class Factory:
 
         # per reaction formula may have more than 1 products (although the chance is small?), in this case, all the
         # products share the same material
+        new_product_line = False
         if rf_id not in self.__product_lines:
+            new_product_line = True
             # setup the FactoryProcess with basic process information
             self.__product_lines[rf_id] = FactoryProcess(rf_info=reaction_formulas_info[rf_id],
                                                          DOP=factory_reaction_info.GetField('days_of_production'),
@@ -594,11 +645,13 @@ class Factory:
                                                          conversion=factory_reaction_info.GetField('conversion'),
                                                          perc_heat_removed=factory_reaction_info.GetField('percent_heat_removed')
                                                          )
+        # the product_line existed, this product need to added, but its quantity should be consistent with the reference
         # add the target product
         self.__product_lines[rf_id].add_product(product_chem_id,
                                                 quantity,
                                                 quantity_unit,
-                                                chemicals_info
+                                                chemicals_info,
+                                                new_product_line
                                                 )
 
     def calculate_byproducts_per_product_line(self, chemicals_info):
@@ -660,6 +713,7 @@ class Factory:
         :return: total revenue of the factory
         """
         rt_value = 0
+        value_unit = ""
         for product_line in self.__product_lines.values():
             rt_value += product_line.revenue_per_year[0]
             value_unit = product_line.revenue_per_year[1]

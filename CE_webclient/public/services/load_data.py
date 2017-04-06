@@ -18,6 +18,22 @@ except ImportError(osr, ogr, gdal):
 gdal.UseExceptions()
 
 
+def create_an_ogrfeature(fieldnames, fieldtypes, fieldvalues):
+    feature_defn = ogr.FeatureDefn()
+    for field_name, field_type in zip(fieldnames, fieldtypes):
+        if field_type == "I":
+            feature_defn.AddFieldDefn(ogr.FieldDefn(field_name, ogr.OFTInteger))
+        elif field_type == "F":
+            feature_defn.AddFieldDefn(ogr.FieldDefn(field_name, ogr.OFTReal))
+        elif field_type == "S":
+            field_def = ogr.FieldDefn(field_name[0], ogr.OFTString)
+            field_def.SetWidth(field_name[1])
+            feature_defn.AddFieldDefn(field_def)
+    a_feature = ogr.Feature(feature_defn)
+    for i in range(feature_defn.GetFieldCount()):
+        a_feature.SetField(i, fieldvalues[i])
+    return a_feature
+
 def get_all_drivers():
     """
     get all the drivers GDAL supports
@@ -325,6 +341,18 @@ class DataLoader:
             return rt_util_types
 
 # if __name__ == "__main__":
+    # field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
+    #  "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]
+    # field_types = ["I", "I", "S", "I", "I", "F", "F", "I", "F", "F"]
+    # values = [i+1 for i in range(10)]
+    # values[2] = "T"
+    # test_feature = create_an_ogrfeature(field_names, field_types, values)
+    # for name in field_names:
+    #     if type(name) == tuple:
+    #         print(test_feature.GetField(name[0]))
+    #     else:
+    #         print(test_feature.GetField(name))
+
 #     get_all_drivers()
 #     db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
 #     all_chemicals = db.get_all_chemicals()          # {chemical_object_id: Chemical}

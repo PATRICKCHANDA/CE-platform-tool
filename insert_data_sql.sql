@@ -3,21 +3,21 @@ insert into public.chemical values(1, 'Ethylene', '乙烯', 28, 1.26,'C2H4','T', 5
 insert into public.chemical values(2, 'Oxygen', '氧', 32, 1.4,'O2','T', 200, 0, 'EUR', 900);
 insert into public.chemical values(3, 'Ethylene oxide', '环氧乙烷', 44, 0,'C2H4O','T', 800, 0, 'EUR', NULL);
 insert into public.chemical values(4, 'carbon dioxide', '二氧化碳', 44, 0,'CO2','T', 40, 0, 'EUR', NULL);
-insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'EUR', NULL);
+insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'EUR', NULL);  -- byproducts
 insert into public.chemical values(6, 'Ammonia', '氨', 18, 0,'NH3','T', 100, 0, 'EUR', NULL);
-insert into public.chemical values(7, 'Ethanolamines', '单乙醇胺', 61, 0,'NH2CH2CH2OH','T', 1000, 0, 'EUR', NULL);
+insert into public.chemical values(7, 'Ethanolamines(MEA)', '单乙醇胺', 61, 0,'NH2CH2CH2OH','T', 1000, 0, 'EUR', NULL);
 insert into public.chemical values(8, 'Di-Triethaolamines', '二-三乙醇胺', 115, 0,'DEA,TEA','T', 500, 0, 'EUR', NULL);
 insert into public.chemical values(9, 'p-xylene(PX)',       '对二甲苯', 106, 1.26, 'C8H10', 'T',593,0,'EUR',1530);
 insert into public.chemical values(10, 'air',               '空气',    28.84, 1.4, '',        'T', 0, 0, 'EUR', 900);
 insert into public.chemical values(11, 'Acetic acid',       '乙酸',    60,    0, 'CH3COOH', 'T', 300, 0, 'EUR', NULL);
-insert into public.chemical values(12, 'normal water',      '普通水',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL);
+insert into public.chemical values(12, 'normal water',      '普通水',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL); -- as catalyst
 insert into public.chemical values(13, 'Cobalt',            '钴',      59,    0, 'Co', 'T', 300, NULL, 'EUR', NULL);
 insert into public.chemical values(14, 'Terepthalic acid(TA)',  '对苯二甲酸',166,   0, 'p-C6H4(COOH)2', 'T', 800, NULL, 'EUR', NULL);
 insert into public.chemical values(15, 'Nitrogen',  '液氮', 14,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
 
 -- public.reaction_formula
 insert into public.reaction_formula values(1, '环氧乙烷(EO)', 200, 20, '(-106.7-1327*(1/c-1))'); -- attention: do not divide by 3600, which is conversion from kJ to kWh
-insert into public.reaction_formula values(2, '乙醇胺(MEA)', 200, 20, '-125/c');
+insert into public.reaction_formula values(2, '乙醇胺(MEA, DEA/TEA)', 200, 20, '-125/c');
 insert into public.reaction_formula values(3, '对苯二甲酸(TA)', 150, 15, '-21200/c');
 insert into public.reaction_formula values(4, '液化气体', 130, -192, '0');
 
@@ -64,7 +64,7 @@ insert into public.emission_data values(12, 3, 'CO2', '二氧化碳', 'kg/kg', null,
 
 -- gaolanport.factory_reaction_product
 insert into gaolanport.factory_reaction_product values(2,1,3, 181898, 340,24,20,1,1,NULL, 'T', 0.86, 0.0216);
-insert into gaolanport.factory_reaction_product values(2,2,7, 100000, 340,24,20,1,1,NULL, 'T', 0.70, 0.02);  
+-- insert into gaolanport.factory_reaction_product values(2,2,7, 100000, 340,24,20,1,1,NULL, 'T', 0.70, 0.02);  
 insert into gaolanport.factory_reaction_product values(4,3,14, 80000, 340,24,20,1,1,NULL, 'T', 0.95, 0.02);  -- TA
 insert into gaolanport.factory_reaction_product values(5,4,15, 100000, 340,24,20,1,1,NULL, 'T', 0.99, NULL); -- N2
 insert into gaolanport.factory_reaction_product values(5,4,2, 100000, 340,24,20,1,1,NULL, 'T', 0.99, NULL);  -- O2

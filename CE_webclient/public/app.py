@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, redirect, url_for, request, make_response, g
-from services.load_data import DataLoader
+from services.load_data import DataLoader, create_an_ogrfeature
 from services.ce_analysis import CEAnalysis, SHORT_NAME_FACTORY, SHORT_NAME_EMISSION, \
     SHORT_NAME_UTILITY_TYPE, SHORT_NAME_CHEMICAL
 
@@ -17,10 +17,51 @@ def index():
     return render_template("index.html")
 
 
+@app.route('/addRftoFactory/<int:rf_id>/<int:factory_id>')
+def add_a_productline_to_factory(rf_id, factory_id):
+    """
+    add a new product line into the factory
+    :param factory_id: 
+    :param rf_id: 
+    :return: 
+    """
+    if factory_id not in factories:
+        return jsonify({'error': "unknown factory_id " + str(factory_id)})
+    if rf_id in factories[factory_id].factory_product_lines:
+        return jsonify({"info": "process existed already in the factory."})
+    if rf_id not in all_reactions:
+        return jsonify({"error": "unknown process in the system."})
+    factory = factories[factory_id]
+    # create a feature
+    # todo: those data should be acquired via Database after user has add a process information into a factory
+    # todo: currently we create a feature
+    # db_loader = get_db()
+    # db_loader.get_factory_product(factory_id, rf_id)
+    # db_loader.close()
+    field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
+     "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]
+    field_types = ["I", "I", "S", "I", "I", "F", "F", "I", "F", "F"]
+    # if there are more than 1 products in this process, choose the one whose quantity is 1
+    product_chem_id = next(iter(all_reactions[rf_id].products.keys()))
+    values = [product_chem_id, 45199, 'T', 340, 24, 20, 1, -1, 0.7, 0.02]
+    # todo: add other products of this productline, should based on user input, currently we add all products
+    for chem_id, detail in all_reactions[rf_id].products.items():
+        values[0] = chem_id
+        feature = create_an_ogrfeature(field_names, field_types, values)
+        # add the product line, which will add 1 product of this product line
+        factory.add_product_line(feature, rf_id, all_reactions, all_chemicals)
+
+    factory.calculate_byproducts_per_product_line(all_chemicals)
+    factory.calculate_emission_per_product_line(all_emission_data)
+    factory.calculate_utilities_per_product_line(all_utility_info, all_chemicals)
+    print(url_for('get_factory_products', factory_id=factory_id))
+    return redirect(url_for("get_factory_products", factory_id=factory_id))
+
+
 @app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
 def calc_factory_productline(factory_id, rf_id):
     """
-    (re)calculate a factory's one product line, including the material, byproducts, emissions, utilities
+    (re)calculate a factory's one product line(process), including the material, byproducts, emissions, utilities
     :param factory_id: 
     :param rf_id: reaction_formula_id
     :return: 
@@ -46,6 +87,9 @@ def calc_factory_productline(factory_id, rf_id):
 # http://stackoverflow.com/questions/32288722/call-python-function-from-js
 @app.route('/getFactory', methods=['GET'])
 def get_factory():
+    """
+    :return: json format of all factory basic information 
+    """
     app_init()
     # global factories
     if request.method == 'GET':
@@ -72,12 +116,14 @@ def get_all_chemicals():
 @app.route('/getFactoryIds/<int:factory_id>/<string:component_type>/<string:component_name>/<int:as_supplier>', methods=['GET'])
 def get_factory_ids_dealing_with_component(factory_id, component_type, component_name, as_supplier):
     """
+    based on the component type(emission, utility, chemical), and name(string or id), find all factories which use this
+    as their input or supply it as their output
     :param factory_id:
     :param component_type: chemical/emission/utility
     :param component_name: can be an id or name(emission)
     :param as_supplier: indicate this factor supply this component, we need to find factory USE this component, 
     or another way round.
-    :return: 
+    :return: json format of a list of id's
     """
     global analyzer
     ids = analyzer.get_factory_ids_by_col_id(component_name, component_type[0], not as_supplier)
@@ -127,6 +173,9 @@ def close_db(exception):
 
 
 def app_init():
+    """
+    server initialization
+    """
     global factories
     global all_reactions
     global all_chemicals
