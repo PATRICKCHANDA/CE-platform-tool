@@ -59,7 +59,8 @@ $(document).ready(function () {
     // todo: load the analysis result
     //loadCEAnalysis();
 
-
+    // todo: whole area revenue
+    OVERVIEW.show_area_total_revenue();
 });
 
 function loadAllReactions() {
@@ -77,7 +78,7 @@ function loadAllChemicals() {
     $.getJSON(url_get_chemicals)
     .done(function (data) {
         if (data.length > 0)
-            display_all_chemicals(data);
+            CHEMICALS.display_all_chemicals(data);
     })
     .fail(function (status, err) {
         console.log("Error: Failed to load chemicals from DB.");
@@ -142,7 +143,7 @@ function resetFactoryColor(factory_id) {
     factory_layer.eachLayer(function (layer) {
         if (layer.feature.id == factory_id) {
             factory_layer.resetStyle(layer);
-            break;
+            return;
         };
     });
 }

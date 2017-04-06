@@ -60,6 +60,7 @@ function add_a_table_row(a_table_body, contents, value_editable, contents_id, co
                 if (component_type) {
                     aCell.innerText = '';
                     alink = aCell.appendChild($("<a href='#'>" + contents[i] + "</a>").get(0));
+                    // save the factory_id, component_type, component_id/name, is_supplier in the link attribute
                     alink.data = g_factory_id + "/" + component_type + "/" + contents_id[i] + "/" + (+is_supplier);
                     alink.onclick = function (e) {
                         //console.log(e.target.data);

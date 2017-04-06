@@ -16,7 +16,7 @@
     <div class="container-fluid main_container">
         <div id="title-row" class="row justify-content-center">
             <div class="col-sm-11" align="center">
-                <h1>高栏港循环经济工具平台</h1>
+                <h1>高栏港循环经济工具平台<span style="font-size: 20px !important">(正在开发版)</span></h1>
             </div>
             <div class="col-sm-1" align="right">
                 <button id="btn_full_view" class="btn-sm" align="right">
@@ -48,7 +48,7 @@
                     <div class="panel-heading"><i class="fa fa-table" aria-hidden="true"></i>基本输入信息(basis)</div>
                     <table class="table table-striped"></table>
                     <button id="btn_confirm_change_input" type="button" class="btn btn-secondary">
-                        <i class="fa fa-check" aria-hidden="true"></i>确认修改
+                        <i class="fa fa-check" aria-hidden="true"></i>提交修改
                     </button>
                 </div>
                 <br>
@@ -65,15 +65,22 @@
                     <table class="table table-striped"><i class="fa fa-table" aria-hidden="true"></i><strong>副产品(byproducts)</strong></table>
                 </div>
             </div>
-            <div class="collapse" id="analysis-col">Analysis
+            <div class="collapse" id="analysis-col">
+                <i class="fa fa-info-circle" aria-hidden="true"></i><label id="area_total_revenue"></label>
                 <div class="panel panel-info" id="all_processes_info">
-                    <label class="col-sm-5">选择生产工艺(process):</label>
-                    <select class="col-sm-6"></select>
-                    <div class="row" id="process_product_name_quantity"></div>
-                    <button id="btn_add_process_to_factory" type="button" class="btn btn-secondary">
-                        <i class="fa fa-cart-plus" aria-hidden="true"></i>添加该工艺到企业
-                    </button>
-                    <label id="info_add_process"></label>
+                    <div class="panel-heading">
+                        <label class="col-sm-5">选择生产工艺(process):</label>
+                        <select class="col-sm-6">
+                            <option disabled selected> -- 选择 -- </option>
+                        </select>
+                    </div>
+                    <div class="panel-body" id="process_product_name_quantity"></div>
+                    <div class="panel-footer">
+                        <button id="btn_add_process_to_factory" type="button" class="btn btn-secondary">
+                            <i class="fa fa-cart-plus" aria-hidden="true"></i>添加该工艺到企业
+                        </button>
+                        <label id="info_add_process"></label>
+                    </div>
                 </div>
                 <br>
             </div>
@@ -91,6 +98,7 @@
     <script src="../static/js/factory_process.js"></script>
     <script src="../static/js/chemicals.js"></script>
     <script src="../static/js/reaction_formulas.js"></script>
+    <script src="../static/js/overview.js"></script>
 
     <!--<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tether.min.js') }}"></script>

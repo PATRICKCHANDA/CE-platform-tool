@@ -165,6 +165,15 @@ def get_db():
     return g.postgres_db
 
 
+@app.route("/getTotalRevenue")
+def get_whole_are_revenue():
+    total_revenue = 0
+    for factory in factories.values():
+        total_revenue += factory.factory_revenue[0]
+        if factory.factory_revenue[1] != '':
+            unit = factory.factory_revenue[1]
+    return jsonify(total_revenue, unit)
+
 @app.teardown_appcontext
 def close_db(exception):
     """Closes the database again at the end of the request."""
