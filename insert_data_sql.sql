@@ -13,7 +13,7 @@ insert into public.chemical values(11, 'Acetic acid',       'ÒÒËá',    60,    0,
 insert into public.chemical values(12, 'normal water',      'ÆÕÍ¨Ë®',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL); -- as catalyst
 insert into public.chemical values(13, 'Cobalt',            'îÜ',      59,    0, 'Co', 'T', 300, NULL, 'EUR', NULL);
 insert into public.chemical values(14, 'Terepthalic acid(TA)',  '¶Ô±½¶þ¼×Ëá',166,   0, 'p-C6H4(COOH)2', 'T', 800, NULL, 'EUR', NULL);
-insert into public.chemical values(15, 'Nitrogen',  'Òºµª', 14,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
+insert into public.chemical values(15, 'Nitrogen',  'Òºµª', 28,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
 
 -- public.reaction_formula
 insert into public.reaction_formula values(1, '»·ÑõÒÒÍé(EO)', 200, 20, '(-106.7-1327*(1/c-1))'); -- attention: do not divide by 3600, which is conversion from kJ to kWh
@@ -30,7 +30,7 @@ insert into public.reaction_product values(8, 2, '(62/c-61)/115', 'moles');
 insert into public.reaction_product values(14, 3, '1', 'moles');
 insert into public.reaction_product values(5, 3, '2/c', 'moles');
 insert into public.reaction_product values(2, 4, '1', 'moles');
-insert into public.reaction_product values(15, 4, '1.1', 'moles');
+insert into public.reaction_product values(15, 4, '1.142857', 'moles');
 
 
 -- public.reaction_reactant (should be checked by the application since the conversion value can be changed)
