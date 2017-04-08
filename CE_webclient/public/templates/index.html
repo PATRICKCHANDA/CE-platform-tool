@@ -5,12 +5,15 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../static/css/styles.css">
+    <!--using this if internet connection-->
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">-->
+    <!--<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />-->
+    <!--<link rel="stylesheet" href="../static/css/styles.css">-->
+    
+    <!-- Bootstrap CSS + fontawesome: for no internet connection-->
+    <link rel="stylesheet" href="../static/css/styles_no_internet.css">
     <!--<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">-->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
+
 </head>
 <body>
     <div class="container-fluid main_container">
@@ -34,7 +37,7 @@
                 </li>
             </ul>
             <!-- title -->
-            <div class="col-sm-11" align="center">
+            <div class="col-sm-10" align="center">
                 <h1>高栏港循环经济工具平台<span style="font-size: 20px !important">(正在开发版)</span></h1>
             </div>
             <div class="col-sm-1" align="right">
