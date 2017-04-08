@@ -80,6 +80,7 @@ class ProcessComponent:
     def calculate_quantity(self, molar_mass, production_time):
         self.quantity = UnitConversion.convert(molar_mass * self.moles_per_second * production_time,
                                                'g', self.quantity_unit, 'QUALITY')
+
     def calculate_moles_per_second(self, molar_mass, production_time):
         self.moles_per_second = UnitConversion.convert(self.quantity, self.quantity_unit, 'g', 'QUALITY') \
         / (molar_mass * production_time)
@@ -145,8 +146,8 @@ class ProcessProduct(ProcessComponent):
         :return: boolean
         """
         # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
-        # step 0. convert the product quantity from unit(here is T)/year to moles/s
-        self.calculate_moles_per_second(chemicals_info[self.component_id].molar_mass, production_time)
+        # # step 0. convert the product quantity from unit(here is T)/year to moles/s
+        # self.calculate_moles_per_second(chemicals_info[self.component_id].molar_mass, production_time)
         # step 1. loop through all the reactants info from the reaction_formula, they are all materials!
         for chem_id, reactant in a_reaction_formula.reactants.items():
             if chem_id not in chemicals_info:
@@ -220,6 +221,16 @@ class FactoryProcess:
         if self.__ref_product_chem_id is None:
             raise ValueError("Cannot find a reference product in the defined process.")
 
+    def __calc_mps_from_ref(self, product_chemical_id):
+        """
+        calculate moles per second of a product based on mps of a reference product's mps
+        :param product_chemical_id: 
+        :return: mps (moles per second)
+        """
+        c = self.conversion
+        formula = self.rf_info.products[product_chemical_id].quantity
+        return self.__ref_product.moles_per_second * eval(formula)
+
     def add_product(self, product_chemical_id, quantity, unit, all_chem_info, new_product_line):
         """
         create a ProcessProduct, and calculate its value and also required material information
@@ -253,9 +264,7 @@ class FactoryProcess:
         # if this product is an existed process, then the ref_product should already be created
         if not new_product_line:
             # update the moles per second to consistent with reference
-            c = self.conversion
-            formula = self.rf_info.products[product_chemical_id].quantity
-            a_product.moles_per_second = self.__ref_product.moles_per_second * eval(formula)
+            a_product.moles_per_second = self.__calc_mps_from_ref(product_chemical_id)
             # update its quantity
             a_product.calculate_quantity(curt_chem_info.molar_mass, self.production_time)
 
@@ -282,14 +291,24 @@ class FactoryProcess:
                                             ref_chem_info.unit_cost,
                                             ref_chem_info.currency
                                             )
-        if self.__ref_product_chem_id != product_chemical_id:
-            c = self.conversion
-            formula = self.rf_info.products[product_chemical_id].quantity
-            # calculate moles per second for the reference product in this product line
-            self.__ref_product.moles_per_second = a_product.moles_per_second / eval(formula)
-            # and update the quantity
-            self.__ref_product.calculate_quantity(ref_chem_info.molar_mass, self.production_time)
-            self.__ref_product.calculate_product_value(ref_chem_info)
+        self.__calc_ref_product_info(a_product.moles_per_second, product_chemical_id, ref_chem_info)
+
+    def __calc_ref_product_info(self, product_mps, product_chemical_id, ref_chem_info):
+        """
+        based on the other product's moles_per_second, calculate the reference product's moles_per_second
+        :param product_mps: moles_per_second of the product
+        :param product_chemical_id: 
+        :param ref_chem_info: reference product's chemical id
+        :return: 
+        """
+        c = self.conversion
+        formula = self.rf_info.products[product_chemical_id].quantity
+        # calculate moles per second for the reference product in this product line
+        self.__ref_product.moles_per_second = product_mps / eval(formula)
+        # update the quantity
+        self.__ref_product.calculate_quantity(ref_chem_info.molar_mass, self.production_time)
+        # update the value
+        self.__ref_product.calculate_product_value(ref_chem_info)
 
     def calculate_byproducts(self, all_chem_info, update=False):
         """
@@ -305,7 +324,7 @@ class FactoryProcess:
         # step 1. take one product from this FactoryProcess(reaction formula), if not a product, then it is a
         # byproduct
         byproduct_names = []
-        for chem_id, rf_product in self.rf_info.products.items():
+        for chem_id in self.rf_info.products.keys():
             # check
             if chem_id not in all_chem_info:
                 print("[ERROR] in function calculate_byproducts(): Unknown chemical [", chem_id, "] in the database")
@@ -314,10 +333,8 @@ class FactoryProcess:
             # then consider it as byproduct
             if chem_id not in self.__products:
                 chem_info = all_chem_info[chem_id]
-                c = self.conversion
-                # calculate the moles/s for the reactant using the ratio formula from database
-                formula = rf_product.quantity
-                moles_byproduct = eval(formula) * a_product.moles_per_second
+                # calculate the moles/s for the byproduct using the ratio formula from database
+                moles_byproduct = self.__calc_mps_from_ref(chem_id)
                 # convert moles/s to unit/year
                 annual_quantity = UnitConversion.convert(chem_info.molar_mass * moles_byproduct * self.production_time,
                                                          'g',
@@ -490,25 +507,33 @@ class FactoryProcess:
         self.conversion = contents['conversion']
         if product_chemical_id not in self.__products:
             return [False, "unknown product_id " + product_chemical_id + " in reaction_formula " + self.rf_name]
+
         a_product = self.__products[product_chemical_id]
         # 1. update product quantity
-        ratio = 1.0 * contents['quantity'] / a_product.quantity
         a_product.quantity = contents['quantity']
+        # update its MPS(moles per second)
+        a_product.calculate_moles_per_second(all_chem_info[product_chemical_id].molar_mass, self.production_time)
+        # update ref_product info, which will change the MPS of the reference product
+        self.__calc_ref_product_info(a_product.moles_per_second, product_chemical_id, all_chem_info[self.__ref_product_chem_id])
         # 2. update product value
         new_value_per_unit = contents['value_per_unit_' + str(product_chemical_id)]
         # update the local price: the price of the component will not affect other factory having the component
         a_product.value_per_unit = new_value_per_unit
         a_product.calculate_product_value(all_chem_info[product_chemical_id], new_value_per_unit)
+
         # updates also other products of this production line!
         for chem_id, other_product in self.__products.items():
             if chem_id != product_chemical_id:
+                chem_info = all_chem_info[chem_id]
                 # update quantity
-                other_product.quantity = other_product.quantity * ratio
+                other_product.moles_per_second = self.__calc_mps_from_ref(chem_id)
+                other_product.calculate_quantity(chem_info.molar_mass, self.production_time)
                 # update value per unit, both in the Chemical and ProcessProduct
                 new_value_per_unit = contents['value_per_unit_' + str(chem_id)]
                 other_product.value_per_unit = new_value_per_unit
                 # recalculate the product value
                 other_product.calculate_product_value(all_chem_info[chem_id], new_value_per_unit)
+        # todo: update the __ref_product's moles_per_second!
 
         # 3. update material consumption
         succeed = a_product.calculate_materials(self.__ref_product.moles_per_second, self.__material, self.conversion,

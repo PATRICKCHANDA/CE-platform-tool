@@ -10,7 +10,7 @@
     infra1   |
     infra2   |
 
-    value > 0: factory produce/generate this item
+    value > 0: factory produce/supply this item
     value < 0: factory use/recycle/treat this item
 """
 import numpy as np
@@ -86,11 +86,17 @@ class CEAnalysis:
         self.A = np.zeros((n_rows, n_cols), dtype=np.float64)
 
     def get_factory_id_by_index(self, row_index):
+        """
+        get the factory_id on the items defined in the row 
+        :param row_index: 
+        :return: 
+        """
         object_id = self.dict_row_index_2_obj_id.get(row_index) - CEAnalysis.OFFSET_FACTORY
         return object_id
 
     def get_object_id_by_index(self, col_index):
-        """       
+        """     
+          get the object_id on the items defined in the column
         :param col_index: column index of the 2D array
         :return: object_id from the database, which is used as dictionary key in their container respectively
         """
@@ -106,6 +112,11 @@ class CEAnalysis:
 
     @staticmethod
     def __generate_unique_obj_id(object_id, name):
+        """       
+        :param object_id: id or name if it is emission 
+        :param name: 
+        :return: 
+        """
         unique_obj_id = object_id
         if name.lower() == SHORT_NAME_CHEMICAL:
             unique_obj_id = CEAnalysis.OFFSET_CHEMICAL + int(object_id)
@@ -154,17 +165,53 @@ class CEAnalysis:
         else:
             return []
 
-    def set_value(self, factory_obj_id, col_object_id, name, value):
+    def set_value(self, factory_obj_id, col_object_id, name, value, plus):
         """       
         :param factory_obj_id: 
         :param col_object_id:  object_id of emission, utility or chemical
         :param name: indication of e(emission), u(utility) or c(chemical)
         :param value: 
+        :param plus: boolean, if True, use +=, otherwise use -=, which will substract the info from the array
         :return: 
         """
         row_index = self.get_index_by_id(factory_obj_id, SHORT_NAME_FACTORY)
         col_index = self.get_index_by_id(col_object_id, name)
-        self.A[row_index, col_index] += value
+        if plus:
+            self.A[row_index, col_index] += value
+        else:
+            self.A[row_index, col_index] -= value
+
+    def process_factory_product_line_info(self, factory_id, product_line, plus=True):
+        info = product_line.factory_process_json
+        # factory products
+        for product in info['products']:
+            # get product object_id
+            self.set_value(factory_id, product['id'], SHORT_NAME_CHEMICAL, product['quantity'], plus)
+        # by-products
+        for byproduct in info['by_products']:
+            self.set_value(factory_id, byproduct['id'], SHORT_NAME_CHEMICAL, byproduct['quantity'], plus)
+        # material
+        for material in info['material']:
+            self.set_value(factory_id, material['id'], SHORT_NAME_CHEMICAL, -material['quantity'], plus)
+        # utilities
+        for utility in info['utilities']:
+            self.set_value(factory_id, utility['id'], SHORT_NAME_UTILITY_TYPE, -utility['quantity'], plus)
+        # todo: factory may also provide utility services, data model necessary
+        # emissions
+        for emission in info['emissions']:
+            self.set_value(factory_id, emission['name'], SHORT_NAME_EMISSION, emission['quantity'], plus)
+
+    def process_factory_information(self, factory_id, factory, plus=True):
+        # process each product_line
+        for rf_id, product_line in factory.factory_product_lines.items():
+            self.process_factory_product_line_info(factory_id, product_line, plus)
+
+    def process_all_factories_information(self, factories, plus=True):
+        # fill in the data
+        # add per factory
+        for factory_id, factory in factories.items():
+            # add per factory
+            self.process_factory_information(factory_id, factory, plus)
 
     @property
     def json_format(self):

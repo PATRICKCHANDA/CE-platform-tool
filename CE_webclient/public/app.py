@@ -22,9 +22,10 @@ def add_a_productline_to_factory(rf_id, factory_id):
     """
     add a new product line into the factory
     :param factory_id: 
-    :param rf_id: 
+    :param rf_id: new product line id, which is the reaction_formula id 
     :return: 
     """
+    global analyzer
     if factory_id not in factories:
         return jsonify({'error': "unknown factory_id " + str(factory_id)})
     if rf_id in factories[factory_id].factory_product_lines:
@@ -55,11 +56,13 @@ def add_a_productline_to_factory(rf_id, factory_id):
     factory.calculate_emission_per_product_line(all_emission_data)
     factory.calculate_utilities_per_product_line(all_utility_info, all_chemicals)
     print(url_for('get_factory_products', factory_id=factory_id))
+    # update the CE_analyzer: add the factory product line info
+    analyzer.process_factory_product_line_info(factory_id, factory.factory_product_lines[rf_id], True)
     return redirect(url_for("get_factory_products", factory_id=factory_id))
 
 
 @app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
-def calc_factory_productline(factory_id, rf_id):
+def update_factory_productline(factory_id, rf_id):
     """
     (re)calculate a factory's one product line(process), including the material, byproducts, emissions, utilities
     :param factory_id: 
@@ -73,12 +76,19 @@ def calc_factory_productline(factory_id, rf_id):
     if rf_id not in factories[factory_id].factory_product_lines:
         return jsonify({"error": "unknown reaction_formula_id " + str(rf_id) + " in factory " + str(factory_id)})
     product_id = content['id']
-    a_process = factories[factory_id].factory_product_lines[rf_id]
-    # update the specific process_line of this factory
+    a_productline = factories[factory_id].factory_product_lines[rf_id]
+
+    # 1. update the CE_analyzer: minus the info from the CE_analyzer
+    analyzer.process_factory_product_line_info(factory_id, a_productline, False)
+
+    # 2. update the specific product_line of this factory
     if rf_id in all_emission_data:
-        results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+        results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
     else:
-        results = a_process.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+        results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+
+    # 3. update the CE_analyzer: ADD the info into the CE_analyzer
+    analyzer.process_factory_product_line_info(factory_id, a_productline, True)
     if not results[0]:
         return jsonify(msg=results[1])
     return jsonify(msg='succeed processed')
@@ -168,11 +178,13 @@ def get_db():
 @app.route("/getTotalRevenue")
 def get_whole_are_revenue():
     total_revenue = 0
+    unit = ""
     for factory in factories.values():
         total_revenue += factory.factory_revenue[0]
         if factory.factory_revenue[1] != '':
             unit = factory.factory_revenue[1]
     return jsonify(total_revenue, unit)
+
 
 @app.teardown_appcontext
 def close_db(exception):
@@ -212,34 +224,12 @@ def app_init():
     # construct a analyzer
     analyzer = CEAnalysis(factories, all_chemicals, all_utility_info, all_emission_data)
     # fill in the data
-    for factory_id, factory in factories.items():
-        for rf_id, product_line in factory.factory_product_lines.items():
-            info = product_line.factory_process_json
-            # factory products
-            for product in info['products']:
-                # get product object_id
-                analyzer.set_value(factory_id, product['id'], SHORT_NAME_CHEMICAL, product['quantity'])
-            # by-products
-            for byproduct in info['by_products']:
-                analyzer.set_value(factory_id, byproduct['id'], SHORT_NAME_CHEMICAL, byproduct['quantity'])
-            # material
-            for material in info['material']:
-                analyzer.set_value(factory_id, material['id'], SHORT_NAME_CHEMICAL, -material['quantity'])
-            # utilities
-            # todo: factory may provide utility services,
-            for utility in info['utilities']:
-                analyzer.set_value(factory_id, utility['id'], SHORT_NAME_UTILITY_TYPE, -utility['quantity'])
-            # emissions
-            for emission in info['emissions']:
-                analyzer.set_value(factory_id, emission['name'], SHORT_NAME_EMISSION, emission['quantity'])
+    analyzer.process_all_factories_information(factories)
+
     # analyzer_json = jsonify(analyzer)
     print(analyzer)
 
 if __name__ == '__main__':
     # app_init()
     app.run(host='0.0.0.0', debug=True)
-    # host 0.0.0.0 means it is accessable from any device on the network
-
-
-# todo: added value per unit material
-# todo: added value/unit material
+    # host 0.0.0.0 means it is accessiable from any device on the network

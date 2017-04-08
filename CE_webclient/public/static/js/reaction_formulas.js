@@ -1,9 +1,10 @@
-﻿function add_label_and_textfield(div, label_name) {
-    var $new_row = div.append('<div class="row"><div>');
-    var label = '<label class="col-sm-6">' + label_name + ':</label>';
-    var textfield = '<input type="text" class="col-sm-4">';
+﻿function add_label_and_textfield(div, label_name, chemical_id) {
+    var $new_row = $('<div class="row"></div>');
+    var label = '<label class="col-sm-6" chemical_id="'+ chemical_id + '">' + label_name + ':</label>';
+    var textfield = '<input type="text" class="col-sm-4" value=100000>';
     $new_row.append(label);
     $new_row.append(textfield);
+    div.append($new_row);
 }
 
 /*  \brief insert all the process id and names into a drop-down box
@@ -34,7 +35,7 @@ function display_all_reactions(data) {
         for (var i = 0; i < product_ids.length; ++i) {
             // add the chemical_name and a textarea
             chem_name = CHEMICALS.get_name(product_ids[i]);
-            add_label_and_textfield($div, chem_name);
+            add_label_and_textfield($div, chem_name, product_ids[i]);
         }
     })
 }
@@ -53,6 +54,14 @@ $("#btn_add_process_to_factory").on('click', function (e) {
         $("#info_add_process").text('请点击地图选择企业');
         return;
     }
+
+    var request_content = {};
+    // loop through each row with label and input
+    $("#process_product_name_quantity").children('div').each(function () {
+        var chemical_id = $(this).children('label').attr('chemical_id');
+        var volume = $(this).children('input').val();
+        request_content[chemical_id] = volume;
+    });
 
     // add this reaction_formula into factory
     url = url_insert_rf_to_factory + rf_id + "/" + g_factory_id;

@@ -20,6 +20,7 @@ class RFProduct(RFComponent):
     def __init__(self, info):
         RFComponent.__init__(self, info)
         self.quantity = info.GetField('quantity')
+        # self.is_byproduct = info.GetField('byproduct')
 
 
 class RFReactant(RFComponent):

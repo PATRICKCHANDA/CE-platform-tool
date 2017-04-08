@@ -15,6 +15,8 @@ $("#btn_confirm_change_input").on("click", function() {
     product_line_profit = product_line_profit.substr(0, pos);
     var profit_of_other_processes = Number(total_profit) - Number(product_line_profit);
     apply_model_basis_info_changes(g_factory_id, rf_id, profit_of_other_processes);
+    // refresh the total area revenue
+    OVERVIEW.show_area_total_revenue();
 });
 
 /*  \brief react on the name click event!
