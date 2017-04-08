@@ -61,7 +61,7 @@ $(document).ready(function () {
     //loadCEAnalysis();
 
     // todo: whole area revenue
-    OVERVIEW.show_area_total_revenue();
+    //OVERVIEW.show_area_total_revenue();
 });
 
 function loadAllReactions() {

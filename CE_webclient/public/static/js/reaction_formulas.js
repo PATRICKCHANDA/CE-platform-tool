@@ -94,7 +94,7 @@ $("#btn_add_process_to_factory").on('click', function (e) {
             // display
             // show value of the factory
             // show added value of the whole area
-            OVERVIEW.show_area_total_revenue();
+            //OVERVIEW.show_area_total_revenue();
         }
     })
     .fail(function (status, err) {

@@ -17,6 +17,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route('/areaOverview')
+def overview():
+    return render_template("area_overview.html")
+
+
 @app.route('/addRftoFactory/<int:rf_id>/<int:factory_id>')
 def add_a_productline_to_factory(rf_id, factory_id):
     """
