@@ -55,6 +55,7 @@ $("#btn_add_process_to_factory").on('click', function (e) {
         return;
     }
 
+    // todo:　ｓｅｎｄ
     var request_content = {};
     // loop through each row with label and input
     $("#process_product_name_quantity").children('div').each(function () {
@@ -62,6 +63,21 @@ $("#btn_add_process_to_factory").on('click', function (e) {
         var volume = $(this).children('input').val();
         request_content[chemical_id] = volume;
     });
+
+    // todo: post the data to the server
+    //$.ajax({
+    //    type: "POST",
+    //    url: url_insert_rf_to_factory + rf_id + "/" + g_factory_id,
+    //    data: JSON.stringify(request_content),
+    //    dataType: 'json',
+    //    contentType: 'application/json; charset=utf-8'
+    //})
+    //.done(function (data) {
+    //    console.log("response got: " + data.msg);
+    //})
+    //.fail(function (err) {
+    //    console.log(err)
+    //});
 
     // add this reaction_formula into factory
     url = url_insert_rf_to_factory + rf_id + "/" + g_factory_id;

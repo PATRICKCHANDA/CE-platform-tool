@@ -11,7 +11,8 @@ $(document).ready(function () {
     // http://leafletjs.com/reference.html#control
     L.control.zoom({
         zoomInTitle: '放大',
-        zoomOutTitle: '缩小'
+        zoomOutTitle: '缩小',
+        position:'topright'
     }).addTo(mymap);
 
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
