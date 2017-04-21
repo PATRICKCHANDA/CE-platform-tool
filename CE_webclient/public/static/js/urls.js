@@ -7,3 +7,4 @@ var url_get_factory_productline = "/getFactoryProductLine/";
 var url_get_factory_ids_dealing_with_component = "/getFactoryIds/";
 var url_insert_rf_to_factory = "/addRftoFactory/";  // add reaction formula to a factory
 var url_whole_area_revenue = "/getTotalRevenue";
+var url_post_reaction_formula = "/postReactionformula";

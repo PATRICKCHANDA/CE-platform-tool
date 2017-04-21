@@ -91,19 +91,44 @@ $(document).ready(function () {
     draw_reactionline(line);
 
     $("#send").on("click", function () {
-        var response = {};
+        var request = { reactants: {}, catalysts: {}, products: {}, conditions: {}};
 
         // read data from the reactants table
         $("#reactant > table > tbody > tr").each(function () {
             var amount = $(this).find("td:eq(0) input").val();
             var chem_id = $(this).find("td:eq(1)").attr("data_id");
-            // add to a response
-            response[chem_id] = +amount;
+            request.reactants[chem_id] = parseFloat(amount);
         });
+        request.conditions["temperature"] = parseFloat($("#reactionT").val());
+        request.conditions["pressure"] = parseFloat($("#reactionP").val());
+        // read data from catalyst table
         $("#reaction > table > tbody > tr").each(function () {
+            var amount = $(this).find("td:eq(0) input").val();
+            var chem_id = $(this).find("td:eq(1)").attr("data_id");
+            request.catalysts[chem_id] = parseFloat(amount);
+        });
+        // read data from products table
+        $("#product > table > tbody > tr").each(function () {
+            var amount = $(this).find("td:eq(0) input").val();
+            var chem_id = $(this).find("td:eq(1)").attr("data_id");
+            request.products[chem_id] = parseFloat(amount);
+        });
 
+        // todo: post the data to server
+        $.ajax({
+            type: "POST",
+            url: url_post_reaction_formula,
+            data: JSON.stringify(request),
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8'
         })
-        //$("#product > table > tbody > tr")
+        .done(function (data) {
+            $("#info_message > i").addClass("fa-smile-o");
+            $("#info_message > i").text(" " + data.msg);
+        })
+        .fail(function (err) {
+            $("#info_message").text("Oops!Failed.");
+        })
     });
     //$('#contact_form').bootstrapValidator({
     //    // To use feedback icons, ensure that you use Bootstrap v3.1.0 or later

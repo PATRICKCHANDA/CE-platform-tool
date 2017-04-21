@@ -71,6 +71,12 @@ def add_a_productline_to_factory(rf_id, factory_id):
     return redirect(url_for("get_factory_products", factory_id=factory_id))
 
 
+@app.route('/postReactionformula', methods=['POST'])
+def update_reaction_formula():
+    content = request.get_json()
+    return jsonify(msg='update chemical process succeed.')
+
+
 @app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
 def update_factory_productline(factory_id, rf_id):
     """
