@@ -1,38 +1,79 @@
-﻿$(window).resize(function () {
-    // redraw the reaction line when window size changed
-    var line = d3.select("#reactionline").select("svg").select("line");
-    draw_reactionline(line);
-});
-
-function draw_reactionline(a_line) {
-    // draw a reaction line
-    var svg_width = $("#reactionline").outerWidth();
-    var svg_height = 50;//$("#reactionline").outerHeight();
-    var svg_container = d3.select("#reactionline").select("svg").attr("width", svg_width);
-    var start_x = 5;
-    var start_y = 20;
-    var end_x = svg_width - 35;
-    var end_y = 20;
-
-    a_line.style("stroke", "black")
-        .attr("stroke-width", 4)
-        .attr("x1", start_x)
-        .attr("y1", start_y)
-        .attr("x2", end_x)
-        .attr("y2", end_y)
-        .attr("marker-end", "url(#triangle)");
-}
-
-
-$("button").has("i.fa-plus").on("click", function (e) {
-    console.log(e);
-});
-
-$("button").has("i.fa-minus").on("click", function (e) {
-    console.log(e);
-});
-
+﻿
 $(document).ready(function () {
+    $(window).resize(function () {
+        // redraw the reaction line when window size changed
+        var line = d3.select("#reactionline").select("svg").select("line");
+        draw_reactionline(line);
+    });
+  
+    //! add a new table row with 2 columns: <td><input><td> and <td>
+    function add_table_row(a_table_body, chem_name, chem_id) {
+        var value_cell = '<td><input type="number" step="0.0001" value="1" /></td>';
+        var name_cell = '<td data_id="'+chem_id+'">' + chem_name +'</td>';
+        a_table_body.append('<tr>' + value_cell + name_cell + '</tr>');
+    }
+
+    //! draw an arrow line with the specified <div>
+    function draw_reactionline(a_line) {
+        // draw a reaction line
+        var svg_width = $("#reactionline").outerWidth();
+        var svg_height = 50;//$("#reactionline").outerHeight();
+        var svg_container = d3.select("#reactionline").select("svg").attr("width", svg_width);
+        var start_x = 5;
+        var start_y = 20;
+        var end_x = svg_width - 35;
+        var end_y = 20;
+
+        a_line.style("stroke", "red")
+            .attr("stroke-width", 4)
+            .attr("x1", start_x)
+            .attr("y1", start_y)
+            .attr("x2", end_x)
+            .attr("y2", end_y)
+            .attr("marker-end", "url(#triangle)");
+    }
+
+    function fill_in_chemicals() {
+        $.each(CHEMICALS.get_all_chemicals(), function (id, property) {
+            var markup = '<option value="' + +id + '"> ' + property.name + '</option>';
+            $('select').append(markup);
+        });
+    }
+    //! fill in the select with all chemicals
+    CHEMICALS.load_all_chemicals(fill_in_chemicals);
+
+    $("select").on({
+        "change": function () {
+            var $tbl_body = $(this).parent().siblings('table').find('tbody');
+            add_table_row($tbl_body, $("option:selected", this).text(), this.value);
+            this.blur();
+        },
+        //// able to select the same item(although no logic in chemical reaction)
+        //"focus": function () {
+        //    this.selectedIndex = -1;
+        //}      
+    });
+
+    //! event handler when click the "+" button: add new row in the table
+    $("button").has("i.fa-plus").on("click", function (e) {
+        // add a new row in the table
+        // find the table within the same div as this button
+        var $tbl_body = $(this).parent().siblings('table').find('tbody');
+        // get the name and id from the select option
+        var chem_id = $(this).siblings('select').find('option:selected:enabled').val();
+        var chem_name = $(this).siblings('select').find('option:selected:enabled').text();
+        if (chem_name != "" && chem_id != undefined)
+            add_table_row($tbl_body, chem_name, chem_id);
+    });
+
+    //! event handler when click on the "-" button: remove the last row in the table
+    $("button").has("i.fa-minus").on("click", function (e) {
+        // find the table within the same div as this button
+        var $tbl_body = $(this).parent().siblings('table').find('tbody');     
+        // remove the last row or the focus row
+        $tbl_body.find("tr:last-child").remove();
+    });
+
     var svg_width = $("#reactionline").outerWidth();
     var svg_height = 50;//$("#reactionline").outerHeight();
     var svg_container = d3.select("#reactionline").select("svg").attr("width", svg_width).attr("height", svg_height);
@@ -45,9 +86,25 @@ $(document).ready(function () {
                 .attr("orient", "auto")
                 .append("path")
                 .attr("d", "M 0 0 0 6 9 3")
-                .style("fill", "black");
+                .style("fill", "red");
     var line = svg_container.append("line");
     draw_reactionline(line);
+
+    $("#send").on("click", function () {
+        var response = {};
+
+        // read data from the reactants table
+        $("#reactant > table > tbody > tr").each(function () {
+            var amount = $(this).find("td:eq(0) input").val();
+            var chem_id = $(this).find("td:eq(1)").attr("data_id");
+            // add to a response
+            response[chem_id] = +amount;
+        });
+        $("#reaction > table > tbody > tr").each(function () {
+
+        })
+        //$("#product > table > tbody > tr")
+    });
     //$('#contact_form').bootstrapValidator({
     //    // To use feedback icons, ensure that you use Bootstrap v3.1.0 or later
     //    feedbackIcons: {

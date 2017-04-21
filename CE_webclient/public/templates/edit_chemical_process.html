@@ -10,28 +10,38 @@
     <div class="container-fluid main_container">
         <!-- title -->
         <div class="col-sm-10" align="left">
-            <h3>编辑石油化工反应模块(Edit the petrol chemical process block)<span style="font-size: 20px !important"></span></h3>
+            <h2>编辑石油化工反应模块(Edit the petrol chemical process block)<span style="font-size: 20px !important"></span></h2>
+            <br />
         </div>
         <!-- container for the chemical process definition -->
         <div class="row" id="chemprocess">
-            <!--reactants-->
+            <!--reactants-->           
             <div class="col-md-4" id="reactant" style="background-color:burlywood">
-                <form>
-                    <label class="col-md-4 control-label">数量(单位:摩尔)<br />Amount(moles)</label>
-                    <label class="col-md-4 control-label">名称<br />name</label>
+                <div class="row"><h3>编辑原料:</h3><br /></div>
+                <div class="row">
+                    <label class="col-sm-4">请选择原料:</label>
+                    <select class="col-sm-6">
+                        <option disabled selected>--选择--</option>
+                    </select>
                     <button><i class="fa fa-plus fa-1x" aria-hidden="true"></i></button>
                     <button><i class="fa fa-minus fa-1x" aria-hidden="true"></i></button>
-                    <div class="row">
-                        <input class="col-md-3" type="number" step="0.0001" value="1" />
-                        <select class="col-sm-4">
-                            <option disabled selected>--选择--</option>
-                        </select>
-                    </div>
-                </form>
+                </div>
+                <br />
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="table-info">
+                            <th>数量(单位:摩尔)<br />amount(moles)</th>
+                            <th>名称<br />name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </div>
             <!--reaction condition, catalyst-->
             <div class="col-md-4" id="reaction" ><!--style="background-color:gold"-->
                 <!-- reaction conditions-->
+                <div class="row"><h3>编辑反应条件:</h3><br /></div>
                 <div class="row">
                     <label class="col-md-4 control-label">反应温度(摄氏度)<br />Temperature(C)</label>
                     <input class="col-md-3" type="number" step="0.01" value="20"/>
@@ -45,33 +55,46 @@
                     <svg></svg>
                 </div>
                 <!-- name of catalyst -->
-                <form>
-                    <label class="col-md-4 control-label">数量(单位:摩尔)<br />Amount(moles)</label>
-                    <label class="col-md-4 control-label">名称<br />name</label>
+                <div class="row">
+                    <label class="col-sm-4">请选择催化剂:</label>
+                    <select class="col-sm-6">
+                        <option disabled selected>--选择--</option>
+                    </select>
                     <button><i class="fa fa-plus fa-1x" aria-hidden="true"></i></button>
                     <button><i class="fa fa-minus fa-1x" aria-hidden="true"></i></button>
-                    <div class="row">
-                        <input class="col-md-3" type="number" step="0.0001" value="1" />
-                        <select class="col-sm-4">
-                            <option disabled selected>--选择--</option>
-                        </select>
-                    </div>
-                </form>
+                </div>
+                <br />
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="table-warning">
+                            <th>数量(单位:摩尔)<br />amount(moles)</th>
+                            <th>名称<br />name</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
             <!--products + byproducts -->
             <div class="col-md-4" id="product" style="background-color:darkgray">
-                <form>
-                    <label class="col-md-4 control-label">数量(单位:摩尔)<br />Amount(moles)</label>
-                    <label class="col-md-4 control-label">名称<br />name</label>
+                <div class="row"><h3>编辑生成物:</h3><br /></div>
+                <div class="row">
+                    <label class="col-sm-4">请选择化学产品:</label>
+                    <select class="col-sm-6">
+                        <option disabled selected>--选择--</option>
+                    </select>
                     <button><i class="fa fa-plus fa-1x" aria-hidden="true"></i></button>
                     <button><i class="fa fa-minus fa-1x" aria-hidden="true"></i></button>
-                    <div class="row">
-                        <input class="col-md-3" type="number" step="0.0001" value="1" />
-                        <select class="col-sm-4">
-                            <option disabled selected>--选择--</option>
-                        </select>
-                    </div>
-                </form>
+                </div>
+                <br />
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="table-success">
+                            <th>数量(单位:摩尔)<br />amount(moles)</th>
+                            <th>名称<br />name</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
         <!-- container for the emission, energy, utilities-->
@@ -83,7 +106,7 @@
         <!-- submit Button -->
         <div class="row">
             <div class="col-md-4">
-                <button type="submit" class="btn btn-warning">Send <span class="glyphicon glyphicon-send"></span></button>
+                <button id="send" type="button" class="btn btn-warning">Send <span class="glyphicon glyphicon-send"></span></button>
             </div>
             <label class="col-md-4 control-label"></label>
         </div>
@@ -94,5 +117,7 @@
     <script src="../static/js/bootstrap.min.js"></script>
     <script src="../static/js/d3.min.js"></script>
     <script src="../static/js/edit_chemical_process.js"></script>
+    <script src="../static/js/chemicals.js"></script>
+    <script src="../static/js/urls.js"></script>
 </body>
 </html>

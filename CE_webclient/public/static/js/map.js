@@ -52,11 +52,11 @@ $(document).ready(function () {
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
     });
 
-    loadGeometries(mymap);
-    // todo: load all chemical information
-    loadAllChemicals();
+    load_geometries(mymap);
+    // load all chemical information
+    CHEMICALS.load_all_chemicals(null);
     // Todo: load all reaction_formula information
-    loadAllReactions();
+    load_all_reactions();
     // todo: load the analysis result
     //loadCEAnalysis();
 
@@ -64,7 +64,7 @@ $(document).ready(function () {
     //OVERVIEW.show_area_total_revenue();
 });
 
-function loadAllReactions() {
+function load_all_reactions() {
     $.getJSON(url_get_reactions)
     .done(function (data) {
         if (data.length > 0)
@@ -75,23 +75,13 @@ function loadAllReactions() {
     })
 }
 
-function loadAllChemicals() {
-    $.getJSON(url_get_chemicals)
-    .done(function (data) {
-        if (data.length > 0)
-            CHEMICALS.display_all_chemicals(data);
-    })
-    .fail(function (status, err) {
-        console.log("Error: Failed to load chemicals from DB.");
-    })
-}
-// query the database to get the factories, buildings, rails, roads. And display them in the map
-function loadGeometries(mymap) {
+//! query the database to get the factories, buildings, rails, roads. And display them in the map
+function load_geometries(mymap) {
     // get the GeoJSON from the database
     $.getJSON(url_get_factory)
     .done(function (data) {
         factory_layer = L.geoJSON(data, {
-            onEachFeature: onEachFeature
+            onEachFeature: on_each_feature
         }).addTo(mymap);
 //        mymap.addLayer(factory_layer);
 
@@ -103,7 +93,7 @@ function loadGeometries(mymap) {
 }
 
 // for each factory polygon, get its products
-function onEachFeature(feature, layer) {
+function on_each_feature(feature, layer) {
     // show the clicked feature name
     if (feature.properties) {
         layer.bindPopup(feature.id + ":" + feature.properties.name);

@@ -4,15 +4,28 @@
 var CHEMICALS = (function () {
     var all_chemicals = {};
     
-    function test() { };
+    function save_all_chemicals(data) {
+        for (var i = 0; i < data.length; ++i) {
+            chem_id = data[i][0];
+            chem_detail = data[i][1];
+            all_chemicals[chem_id] = chem_detail;
+        }
+    }
 
     return {
-        display_all_chemicals: function (data) {
-            for (var i = 0; i < data.length; ++i) {
-                chem_id = data[i][0];
-                chem_detail = data[i][1];
-                all_chemicals[chem_id] = chem_detail;
-            }
+        load_all_chemicals: function(func) {
+            $.getJSON(url_get_chemicals)
+            .done(function (data) {
+                if (data.length > 0) {
+                    save_all_chemicals(data);
+                    // execute some callback
+                    if (func)
+                        func();
+                }
+            })
+            .fail(function (status, err) {
+                console.log("Error: Failed to load chemicals from DB.");
+            })
         },
 
         get_all_chemicals: function () {

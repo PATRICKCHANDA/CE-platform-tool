@@ -30,6 +30,7 @@ function display_all_reactions(data) {
     $select.on('change', function (e) {
         $("#info_add_process").text("");
         var $div = $("#process_product_name_quantity");
+        // remove all the products info of previous process
         $div.children().remove();
         var product_ids = $("option:selected", this).attr("product_ids").split(',');
         for (var i = 0; i < product_ids.length; ++i) {
