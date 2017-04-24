@@ -74,6 +74,9 @@ def add_a_productline_to_factory(rf_id, factory_id):
 @app.route('/postReactionformula', methods=['POST'])
 def update_reaction_formula():
     content = request.get_json()
+    db_loader = get_db()  # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+    db_loader.update_reaction_formula(content)
+    db_loader.close()
     return jsonify(msg='update chemical process succeed.')
 
 
@@ -86,7 +89,8 @@ def update_factory_productline(factory_id, rf_id):
     :return: 
     """
     content = request.get_json()
-    print(content)
+    if __debug__:
+        print(content)
     if factory_id not in factories:
         return jsonify({"error": "unknown factory_id " + str(factory_id)})
     if rf_id not in factories[factory_id].factory_product_lines:
@@ -192,7 +196,7 @@ def get_db():
 
 
 @app.route("/getTotalRevenue")
-def get_whole_are_revenue():
+def get_whole_area_revenue():
     total_revenue = 0
     unit = ""
     for factory in factories.values():

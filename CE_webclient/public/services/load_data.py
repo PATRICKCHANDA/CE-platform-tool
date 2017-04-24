@@ -340,6 +340,14 @@ class DataLoader:
             self.conn.ReleaseResultSet(lyr)
             return rt_util_types
 
+    def update_reaction_formula(self, content):
+        rf_conditions = content['conditions']
+        rf_catalysts = content['catalysts']
+        rf_emissions = content['emissions']
+        rf_reactants = content['reactants']
+        rf_products = content['products']
+        # todo: update tables public.reaction_formula, public.reaction_product, public.reaction_reactant
+
 # if __name__ == "__main__":
     # field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
     #  "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]

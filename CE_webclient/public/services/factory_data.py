@@ -1,3 +1,8 @@
+"""
+    terminology: 
+    process:  a chemical process = a reaction_formula + emission + utility
+    product line:  a chemical process within a factory
+"""
 from .unit_conversion import UnitConversion
 
 HEAT_CAPACITY_RATIO = 1.4

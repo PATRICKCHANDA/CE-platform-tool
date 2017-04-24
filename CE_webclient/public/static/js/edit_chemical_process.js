@@ -55,7 +55,7 @@ $(document).ready(function () {
     });
 
     //! event handler when click the "+" button: add new row in the table
-    $("button").has("i.fa-plus").on("click", function (e) {
+    $("button").not(".btn-warning").has("i.fa-plus").on("click", function (e) {
         // add a new row in the table
         // find the table within the same div as this button
         var $tbl_body = $(this).parent().siblings('table').find('tbody');
@@ -67,10 +67,32 @@ $(document).ready(function () {
     });
 
     //! event handler when click on the "-" button: remove the last row in the table
-    $("button").has("i.fa-minus").on("click", function (e) {
+    $("button").not(".btn-warning").has("i.fa-minus").on("click", function (e) {
         // find the table within the same div as this button
         var $tbl_body = $(this).parent().siblings('table').find('tbody');     
         // remove the last row or the focus row
+        //var row_count = $tbl_body.find('tr').length;
+        //if (row_count > 2)
+        $tbl_body.find("tr:last-child").remove();
+    });
+
+    //! plus button for emission table only
+    $("button.btn-warning").has("i.fa-plus").on('click', function (e) {
+        // find the table within the same div as this button
+        var $tbl_body = $(this).parent().siblings('table').find('tbody');
+        var name_cell = '<td><input type="text" /></td>';
+        var value_cells = '<td><input type="number" step="0.0000001" value="0" /></td>' + 
+            '<td><input type="number" step="0.0000001" value="0" /></td>' + 
+            '<td><input type="number" step="0.0000001" value="0" /></td>' +
+            '<td><input type="number" step="0.0000001" value="0" /></td>';
+        $tbl_body.append('<tr>' + name_cell + value_cells + '</tr>');
+    });
+    //! minus button for emission table only
+    $("button.btn-warning").has("i.fa-minus").on('click', function (e) {
+        // find the table within the same div as this button
+        var $tbl_body = $(this).parent().siblings('table').find('tbody');
+        //var row_count = $tbl_body.find('tr').length;
+        //if (row_count > 1)
         $tbl_body.find("tr:last-child").remove();
     });
 
@@ -90,8 +112,9 @@ $(document).ready(function () {
     var line = svg_container.append("line");
     draw_reactionline(line);
 
+    // post the reaction to the server
     $("#send").on("click", function () {
-        var request = { reactants: {}, catalysts: {}, products: {}, conditions: {}};
+        var request = { reactants: {}, catalysts: {}, products: {}, conditions: {}, emissions:{} };
 
         // read data from the reactants table
         $("#reactant > table > tbody > tr").each(function () {
@@ -112,6 +135,14 @@ $(document).ready(function () {
             var amount = $(this).find("td:eq(0) input").val();
             var chem_id = $(this).find("td:eq(1)").attr("data_id");
             request.products[chem_id] = parseFloat(amount);
+        });
+        // read data from emission table
+        $("#emission > table > tbody >tr").each(function () {
+            request.emissions['name'] = $(this).find("td:eq(0) input").val();
+            request.emissions['process'] = parseFloat($(this).find("td:eq(1) input").val());
+            request.emissions['heat'] = parseFloat($(this).find("td:eq(2) input").val());
+            request.emissions['electricity'] = parseFloat($(this).find("td:eq(3) input").val());
+            request.emissions['total'] = parseFloat($(this).find("td:eq(4) input").val());
         });
 
         // todo: post the data to server

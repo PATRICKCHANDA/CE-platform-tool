@@ -3,7 +3,6 @@
 <head>
     <title></title>
 	<meta charset="utf-8" />
-    <link rel="stylesheet" href="../static/css/leaflet.css">
     <link rel="stylesheet" href="../static/css/styles_no_internet.css">
 </head>
 <body>
@@ -98,8 +97,29 @@
             </div>
         </div>
         <!-- container for the emission, energy, utilities-->
-        <div class="row">Emission</div>
-        <div class="row">Energy</div>
+        <br />
+        <div class="row">
+            <div id="emission" style="background-color:darkgrey">
+                <div class="row">
+                    <h3 class="col-md-3">编辑排放物: </h3>
+                    <button class="btn-warning"><i class="fa fa-plus fa-1x" aria-hidden="true"></i></button>
+                    <button class="btn-warning"><i class="fa fa-minus fa-1x" aria-hidden="true"></i></button>
+                </div>
+                <br />
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="table-success">
+                            <th>排放物名称<br />name</th>
+                            <th>反应过程排放(单位:kg/kg)<br />process(kg/kg)</th>
+                            <th>用热排放(单位:kg/kg)<br />heat(kg/kg)</th>
+                            <th>用电排放(单位:kg/kg)<br />Electricity(kg/kg)</th>
+                            <th>总排放(单位:kg/kg)<br />Total(kg/kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>        
         <div class="row">Utility</div>
         <!-- message -->
         <div class="alert alert-success" role="alert" id="info_message"><i class="fa"></i></div>
