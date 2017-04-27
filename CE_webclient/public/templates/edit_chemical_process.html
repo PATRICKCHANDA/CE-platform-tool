@@ -96,12 +96,12 @@
                 </table>
             </div>
         </div>
-        <!-- container for the emission, energy, utilities-->
+        <!-- container for the emission-->
         <br />
         <div class="row">
             <div id="emission" style="background-color:darkgrey">
                 <div class="row">
-                    <h3 class="col-md-3">编辑排放物: </h3>
+                    <h3 class="col-md-6">编辑排放物(emission): </h3>
                     <button class="btn-warning"><i class="fa fa-plus fa-1x" aria-hidden="true"></i></button>
                     <button class="btn-warning"><i class="fa fa-minus fa-1x" aria-hidden="true"></i></button>
                 </div>
@@ -120,7 +120,25 @@
                 </table>
             </div>
         </div>        
-        <div class="row">Utility</div>
+        <!-- container for the utility-->
+        <br />
+        <div class="row">
+            <div id="utility" style="background-color:darkgrey">
+                <div class="row">
+                    <h3 class="col-md-8">编辑设施(utility):</h3>
+                </div>
+                <div class="row">
+                    <form class="col-md-12">
+                        <input checked type="checkbox" name="utility" value="electricity">Electricty
+                        <input type="checkbox" name="utility" value="make_up_water">Make up water
+                        <input type="checkbox" name="utility" value="heat_reaction">heat reaction
+                        <input type="checkbox" name="utility" value="heat_thermal">heat thermal
+                        <input type="checkbox" name="utility" value="water_treatment">water treatment
+                    </form>
+                </div>
+                <br />
+            </div>
+        </div>
         <!-- message -->
         <div class="alert alert-success" role="alert" id="info_message"><i class="fa"></i></div>
         <!-- submit Button -->

@@ -7,6 +7,7 @@
 /// <reference path="js/edit_chemical_process.js" />
 /// <reference path="js/factory_process.js" />
 /// <reference path="js/jquery.min.js" />
+/// <reference path="js/jquery.validate.min.js" />
 /// <reference path="js/leaflet.js" />
 /// <reference path="js/map.js" />
 /// <reference path="js/overview.js" />
