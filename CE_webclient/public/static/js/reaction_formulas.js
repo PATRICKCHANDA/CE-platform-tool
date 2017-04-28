@@ -1,4 +1,19 @@
-﻿function add_label_and_textfield(div, label_name, chemical_id) {
+﻿var CHEMICAL_PROCESS = (function () {
+    var all_chemical_process = {};
+
+    return {
+        load_all_reactions: function () {
+
+        },
+        get_a_chemical_process: function (rf_id) {
+            return all_chemical_process[rf_id];
+        },
+    }
+})();
+
+/* \brief display the name of the product and an input field
+*/
+function add_label_and_textfield(div, label_name, chemical_id) {
     var $new_row = $('<div class="row"></div>');
     var label = '<label class="col-sm-6" chemical_id="'+ chemical_id + '">' + label_name + ':</label>';
     var textfield = '<input type="text" class="col-sm-4" value=100000>';

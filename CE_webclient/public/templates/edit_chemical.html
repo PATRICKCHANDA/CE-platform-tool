@@ -27,61 +27,61 @@
                 <legend>详细信息(details)</legend>
                 <div class="row">
                     <label class="col-md-4 control-label">英文名(English name):</label>
-                    <input class="col-md-2" type="text" name="name_en"/>
+                    <input class="col-md-2" type="text" id="cname_en" name="name_en"/>
                 </div><br />
                 <div class="row">
                     <label class="col-md-4 control-label">中文名(chinese name):</label>
-                    <input class="col-md-2" type="text" name="name_cn"/>
+                    <input class="col-md-2" type="text" id="cname_cn" name="name_cn"/>
                 </div><br />
                 <div class="row">
                     <label class="col-md-4 control-label">分子量(molar mass):</label>
-                    <input class="col-md-2" type="number" step="1" value="1" name="molar_mass"/>
+                    <input class="col-md-2" type="number" step="1" value="1" id="cmolar_mass" name="molar_mass"/>
                 </div><br />
                 <div class="row">
                     <label class="col-md-4 control-label">密度(density):</label>
-                    <input class="col-md-2" type="number" value="0" name="density"/>
+                    <input class="col-md-2" type="number" value="0" id="cdensity" name="density"/>
                 </div><br />
                 <div class="row">
                     <label class="col-md-4 control-label">分子式(symbol):</label>
-                    <input class="col-md-2" type="text" name="symbol"/>
+                    <input class="col-md-2" type="text" id="csymbol" name="symbol"/>
                 </div><br />
             </fieldset>
-                <div class="row">
-                    <label class="col-md-4 control-label">单位(unit):</label>
-                    <select class="col-md-2">
-                        <option selected value="T">吨(T)</option>
-                        <option value="kg">千克(kg)</option>
-                    </select>
-                </div><br />
-                <div class="row">
-                    <label class="col-md-4 control-label">单位成本(unit cost):</label>
-                    <input class="col-md-2" type="number" step="0.01" value="0" name="unit_cost"/>
-                </div><br />
-                <div class="row">
-                    <label class="col-md-4 control-label">单位运输成本(unit transport cost):</label>
-                    <input class="col-md-2" type="number" step="0.01" value="0" name="unit_transport_cost"/>
-                </div><br />
-                <div class="row">
-                    <label class="col-md-4 control-label">货币单位(currency):</label>
-                    <select class="col-md-2">
-                        <option selected value="cny">元(yuan)</option>
-                        <option value="eur">欧元(eur)</option>
-                    </select>                       
-                </div><br />
-                <div class="row">
-                    <label class="col-md-4 control-label">sp_heat:</label>
-                    <input class="col-md-2" type="number" name="sp_heat" />
-                    <label class="col-md-4"><i class="fa fa-info-circle" aria-hidden="true"></i>J/Kg.K 在标准温度和压强</label>
-                </div><br />
-                <div class="row">
-                    <!-- submit Button -->
-                    <div class="col-md-2">
-                        <button id="send" type="submit" class="btn btn-success">Update</button>
-                    </div>
-                    <div class="col-md-1">
-                        <button id="reset" type="reset" class="btn btn-info">Reset</button>
-                    </div>
+            <div class="row">
+                <label class="col-md-4 control-label">单位(unit):</label>
+                <select class="col-md-2" id="cunit">
+                    <option selected value="T">吨(T)</option>
+                    <option value="kg">千克(kg)</option>
+                </select>
+            </div><br />
+            <div class="row">
+                <label class="col-md-4 control-label">单位价值(unit value):</label>
+                <input class="col-md-2" type="number" step="0.01" value="0" id="cunit_cost" name="unit_cost"/>
+            </div><br />
+            <div class="row">
+                <label class="col-md-4 control-label">单位运输成本(unit transport cost):</label>
+                <input class="col-md-2" type="number" step="0.01" value="0" id="cunit_transport_cost" name="unit_transport_cost"/>
+            </div><br />
+            <div class="row">
+                <label class="col-md-4 control-label">货币单位(currency):</label>
+                <select class="col-md-2" id="ccurrency">
+                    <option selected value="cny">元(yuan)</option>
+                    <option value="eur">欧元(eur)</option>
+                </select>                       
+            </div><br />
+            <div class="row">
+                <label class="col-md-4 control-label">sp_heat:</label>
+                <input class="col-md-2" type="number" id="csp_heat" name="sp_heat" />
+                <label class="col-md-4"><i class="fa fa-info-circle" aria-hidden="true"></i>J/Kg.K 在标准温度和压强</label>
+            </div><br />
+            <div class="row">
+                <!-- submit Button -->
+                <div class="col-md-2">
+                    <button id="send" type="submit" class="btn btn-success">Update</button>
                 </div>
+                <div class="col-md-1">
+                    <button id="reset" type="reset" class="btn btn-info">Reset</button>
+                </div>
+            </div>
         </form>
         
         <!-- message -->

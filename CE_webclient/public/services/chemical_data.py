@@ -25,6 +25,14 @@ class Chemical:
     @property
     def json_format(self):
         return {"name": self.name,
+                "name_en":self.__name_en,
+                "name_cn": self.__name_cn,
+                "molar_mass": self.molar_mass,
+                "density": self.density,
+                "symbol": self.symbol,
+                "unit": self.unit,
                 "value_per_unit": self.unit_cost,
-                "currency": self.currency
+                "unit_transport_cost": self.unit_transport_cost,
+                "currency": self.currency,
+                "sp_heat": self.sp_heat
                 }

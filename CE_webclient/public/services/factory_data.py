@@ -775,6 +775,6 @@ class Factory:
                    'profit_unit': self.factory_revenue[1],
                    'product_lines': []
                   }
-        for rf_id, product in self.__product_lines.items():
-            results['product_lines'].append((rf_id, product.factory_process_json))
+        for rf_id, product_line in self.__product_lines.items():
+            results['product_lines'].append((rf_id, product_line.factory_process_json))
         return results

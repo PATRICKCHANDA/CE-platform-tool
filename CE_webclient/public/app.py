@@ -16,15 +16,29 @@ analyzer = None
 def index():
     return render_template("index.html")
 
+"""
+    functions render the page
+"""
 
-@app.route('/areaOverview')
+
+@app.route('/area-overview')
 def overview():
     return render_template("area_overview.html")
 
 
-@app.route('/editChemicalProcess')
-def edit_chemical_process():
+@app.route('/chemicals')
+def edit_chemical_page():
+    return render_template("edit_chemical.html")
+
+
+@app.route('/chemical-processes')
+def edit_chemical_process_page():
     return render_template("edit_chemical_process.html")
+
+
+"""
+functions get the request from the client side
+"""
 
 
 @app.route('/addRftoFactory/<int:rf_id>/<int:factory_id>')
@@ -71,7 +85,13 @@ def add_a_productline_to_factory(rf_id, factory_id):
     return redirect(url_for("get_factory_products", factory_id=factory_id))
 
 
-@app.route('/postReactionformula', methods=['POST'])
+@app.route('/setChemical', methods=['POST'])
+def update_chemical():
+    content = request.get_json()
+    return jsonify(msg="update chemical succeed.")
+
+
+@app.route('/setReactionformula', methods=['POST'])
 def update_reaction_formula():
     content = request.get_json()
     db_loader = get_db()  # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
@@ -179,6 +199,11 @@ def get_factory_product_line(factory_id, rf_id):
 
 @app.route('/getFactoryProductLines/<int:factory_id>')
 def get_factory_products(factory_id):
+    """
+    each product line product a product
+    :param factory_id: 
+    :return: 
+    """
     if factory_id in factories:
         products = factories[factory_id].factory_products_json
         return jsonify(products)

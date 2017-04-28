@@ -145,7 +145,7 @@ $(document).ready(function () {
             request.emissions['total'] = parseFloat($(this).find("td:eq(4) input").val());
         });
 
-        // todo: read data for utility information
+        // read data for utility information
         $("input[type='checkbox']:checked").each(function () {
             var name = this.value;
             request.utilities.push(name);

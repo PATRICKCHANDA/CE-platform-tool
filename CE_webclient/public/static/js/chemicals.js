@@ -28,6 +28,10 @@ var CHEMICALS = (function () {
             })
         },
 
+        get_a_chemical: function(chem_id) {
+            return all_chemicals[chem_id];
+        },
+
         get_all_chemicals: function () {
             return all_chemicals;
         },
