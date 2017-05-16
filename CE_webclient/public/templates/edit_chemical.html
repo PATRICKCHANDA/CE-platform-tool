@@ -48,7 +48,7 @@
             </fieldset>
             <div class="row">
                 <label class="col-md-4 control-label">单位(unit):</label>
-                <select class="col-md-2" id="cunit">
+                <select class="col-md-2" id="cunit" name="unit">
                     <option selected value="T">吨(T)</option>
                     <option value="kg">千克(kg)</option>
                 </select>
@@ -63,7 +63,7 @@
             </div><br />
             <div class="row">
                 <label class="col-md-4 control-label">货币单位(currency):</label>
-                <select class="col-md-2" id="ccurrency">
+                <select class="col-md-2" id="ccurrency" name="currency">
                     <option selected value="cny">元(yuan)</option>
                     <option value="eur">欧元(eur)</option>
                 </select>                       
@@ -74,7 +74,6 @@
                 <label class="col-md-4"><i class="fa fa-info-circle" aria-hidden="true"></i>J/Kg.K 在标准温度和压强</label>
             </div><br />
             <div class="row">
-                <!-- submit Button -->
                 <div class="col-md-2">
                     <button id="send" type="submit" class="btn btn-success">Update</button>
                 </div>

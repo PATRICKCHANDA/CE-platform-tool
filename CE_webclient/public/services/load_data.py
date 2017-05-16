@@ -290,8 +290,8 @@ class DataLoader:
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
-            for factory in factories.values():
-                factory.calculate_utilities_per_product_line(utilities_info, chemicals_info)
+            for a_factory in factories.values():
+                a_factory.calculate_utilities_per_product_line(utilities_info, chemicals_info)
 
     # Deprecated
     def get_factory_products(self, factory_id):
@@ -340,63 +340,126 @@ class DataLoader:
             self.conn.ReleaseResultSet(lyr)
             return rt_util_types
 
-    def update_reaction_formula(self, content):
-        rf_conditions = content['conditions']
-        rf_catalysts = content['catalysts']
-        rf_emissions = content['emissions']
-        rf_reactants = content['reactants']
-        rf_products = content['products']
-        # todo: update tables public.reaction_formula, public.reaction_product, public.reaction_reactant
 
-# if __name__ == "__main__":
-    # field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
-    #  "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]
-    # field_types = ["I", "I", "S", "I", "I", "F", "F", "I", "F", "F"]
-    # values = [i+1 for i in range(10)]
-    # values[2] = "T"
-    # test_feature = create_an_ogrfeature(field_names, field_types, values)
-    # for name in field_names:
-    #     if type(name) == tuple:
-    #         print(test_feature.GetField(name[0]))
-    #     else:
-    #         print(test_feature.GetField(name))
 
-#     get_all_drivers()
-#     db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
-#     all_chemicals = db.get_all_chemicals()          # {chemical_object_id: Chemical}
-#     all_reactions = db.get_all_reaction_formulas()  # {rf_id: ReactionFormula}
-#     all_utility_info = db.get_utility_type()        # {utility_type_object_id: UtilityType}
-#     all_emission_data = db.get_emission_data()      # {rf_id: EmissionData}
-#
-#     # get factories
-#     test_factories = db.get_factories()
-#
-#     # get products of all factories
-#     db.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
-#     db.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
-#     db.get_factory_products(2)
-#     db.close()
-#     # construct a analyzer
-#     analyzer = CEAnalysis(test_factories, all_chemicals, all_utility_info, all_emission_data)
-#     # fill in the data
-#     for factory_id, factory in test_factories.items():
-#         for rf_id, product_line in factory.factory_product_lines.items():
-#             info = product_line.factory_process_json
-#             # factory products
-#             for product in info['products']:
-#                 # get product object_id
-#                 analyzer.set_value(factory_id, product['id'], 'c', product['quantity'])
-#             # by-products
-#             for byproduct in info['by_products']:
-#                 analyzer.set_value(factory_id, byproduct['id'], 'c', byproduct['quantity'])
-#             # material
-#             for material in info['material']:
-#                 analyzer.set_value(factory_id, material['id'], 'c', -material['quantity'])
-#             # utilities
-#             # todo: factory may provide utility services,
-#             for utility in info['utilities']:
-#                 analyzer.set_value(factory_id, utility['id'], 'u', -utility['quantity'])
-#             # emissions
-#             for emission in info['emissions']:
-#                 analyzer.set_value(factory_id, emission['name'], 'e', emission['quantity'])
-#     input("press any key to quit...")
+    def check_layer_capabilities(self, layer):
+        capabilities = [
+            ogr.OLCRandomRead,
+            ogr.OLCSequentialWrite,
+            ogr.OLCRandomWrite,
+            ogr.OLCFastSpatialFilter,
+            ogr.OLCFastFeatureCount,
+            ogr.OLCFastGetExtent,
+            ogr.OLCCreateField,
+            ogr.OLCDeleteField,
+            ogr.OLCReorderFields,
+            ogr.OLCAlterFieldDefn,
+            ogr.OLCTransactions,
+            ogr.OLCDeleteFeature,
+            ogr.OLCFastSetNextByIndex,
+            ogr.OLCStringsAsUTF8,
+            ogr.OLCIgnoreFields
+        ]
+
+        print("Layer Capabilities:")
+        for cap in capabilities:
+            print("  %s = %s" % (cap, layer.TestCapability(cap)))
+
+    def test_only(self):
+        wkt = "POINT (1120351.5712494177 741921.4223245403)"
+        point = ogr.CreateGeometryFromWkt(wkt)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+
+        layer = self.conn.CreateLayer('test2', srs, ogr.wkbPoint, ['OVERWRITE=YES'])
+        layerDefn = layer.GetLayerDefn()
+        feature = ogr.Feature(layerDefn)
+        feature.SetGeometry(point)
+        layer.StartTransaction()
+        err_code = layer.CreateFeature(feature)
+        feature = None
+        layer.CommitTransaction()
+        self.check_layer_capabilities(layer)
+
+    def test_only2(self):
+        # wkt = "POINT (1120351.5712494177 741921.4223245403)"
+        # point = ogr.CreateGeometryFromWkt(wkt)
+        # srs = osr.SpatialReference()
+        # srs.ImportFromEPSG(4326)
+        layer = self.conn.CreateLayer('test4', None, ogr.wkbUnknown, ['OVERWRITE=YES'])
+        # add new fields
+        err_code = layer.CreateField(ogr.FieldDefn('object_id', ogr.OFTInteger))
+        field_def = ogr.FieldDefn('name', ogr.OFTString)
+        field_def.SetWidth(50)
+        err_code = layer.CreateField(field_def)
+        # layerDefn = layer.GetLayerDefn()
+        # layerDefn.AddFieldDefn(ogr.FieldDefn('object_id', ogr.OFTInteger))
+        # field_def = ogr.FieldDefn('name', ogr.OFTString)
+        # field_def.SetWidth(50)
+        # layerDefn.AddFieldDefn(field_def)
+        self.check_layer_capabilities(layer)
+        feature = ogr.Feature(layer.GetLayerDefn())
+        # feature.SetGeometry(point)
+        feature.SetField('object_id', 1)
+        feature.SetField('name', 'testing')
+        layer.StartTransaction()
+        err_code = layer.CreateFeature(feature)
+        feature = None
+        layer.CommitTransaction()
+
+
+
+if __name__ == "__main__":
+    field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
+     "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]
+    field_types = ["I", "I", "S", "I", "I", "F", "F", "I", "F", "F"]
+    values = [i+1 for i in range(10)]
+    values[2] = "T"
+    test_feature = create_an_ogrfeature(field_names, field_types, values)
+    for name in field_names:
+        if type(name) == tuple:
+            print(test_feature.GetField(name[0]))
+        else:
+            print(test_feature.GetField(name))
+
+    get_all_drivers()
+    db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+
+    all_chemicals = db.get_all_chemicals()          # {chemical_object_id: Chemical}
+    all_reactions = db.get_all_reaction_formulas()  # {rf_id: ReactionFormula}
+    all_utility_info = db.get_utility_type()        # {utility_type_object_id: UtilityType}
+    all_emission_data = db.get_emission_data()      # {rf_id: EmissionData}
+
+    # get factories
+    test_factories = db.get_factories()
+
+    # get products of all factories
+    db.get_factories_products(test_factories, all_reactions, all_chemicals, all_emission_data)
+    db.get_factories_utilities(test_factories, all_utility_info, all_chemicals)
+    db.get_factory_products(2)
+    db.close()
+    # construct a analyzer
+    analyzer = CEAnalysis(test_factories, all_chemicals, all_utility_info, all_emission_data)
+    # fill in the data
+    for factory_id, factory in test_factories.items():
+        for rf_id, product_line in factory.factory_product_lines.items():
+            info = product_line.factory_process_json
+            # factory products
+            for product in info['products']:
+                # get product object_id
+                analyzer.set_value(factory_id, product['id'], 'c', product['quantity'])
+            # by-products
+            for byproduct in info['by_products']:
+                analyzer.set_value(factory_id, byproduct['id'], 'c', byproduct['quantity'])
+            # material
+            for material in info['material']:
+                analyzer.set_value(factory_id, material['id'], 'c', -material['quantity'])
+            # utilities
+            # todo: factory may provide utility services,
+            for utility in info['utilities']:
+                analyzer.set_value(factory_id, utility['id'], 'u', -utility['quantity'])
+            # emissions
+            for emission in info['emissions']:
+                analyzer.set_value(factory_id, emission['name'], 'e', emission['quantity'])
+    input("press any key to quit...")

@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, redirect, url_for, request, make_response, g
 from services.load_data import DataLoader, create_an_ogrfeature
+from services.save_data import DataSaver
 from services.ce_analysis import CEAnalysis, SHORT_NAME_FACTORY, SHORT_NAME_EMISSION, \
     SHORT_NAME_UTILITY_TYPE, SHORT_NAME_CHEMICAL
 
@@ -88,15 +89,18 @@ def add_a_productline_to_factory(rf_id, factory_id):
 @app.route('/setChemical', methods=['POST'])
 def update_chemical():
     content = request.get_json()
+    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
+    db_saver.update_chemical(content)
+    db_saver.close()
     return jsonify(msg="update chemical succeed.")
 
 
 @app.route('/setReactionformula', methods=['POST'])
 def update_reaction_formula():
     content = request.get_json()
-    db_loader = get_db()  # DataLoader('localhost', 'CE_platform', 'Han', 'Han')
-    db_loader.update_reaction_formula(content)
-    db_loader.close()
+    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
+    db_saver.update_reaction_formula(content)
+    db_saver.close()
     return jsonify(msg='update chemical process succeed.')
 
 
@@ -212,12 +216,17 @@ def get_factory_products(factory_id):
         return jsonify("factory does not exist.")
 
 
-def get_db():
+def get_db(need_loader=True):
     """Opens a new database connection if there is none yet for the current application context.
     """
-    if not hasattr(g, 'postgres_db'):
-        g.postgres_db = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
-    return g.postgres_db
+    if need_loader:
+        if not hasattr(g, 'postgres_db_loader'):
+            g.postgres_db_loader = DataLoader('localhost', 'CE_platform', 'Han', 'Han')
+        return g.postgres_db_loader
+    else:
+        if not hasattr(g, 'postgres_db_saver'):
+            g.postgres_db_saver = DataSaver('localhost', 'CE_platform', 'Han', 'Han')
+        return g.postgres_db_saver
 
 
 @app.route("/getTotalRevenue")
@@ -234,8 +243,10 @@ def get_whole_area_revenue():
 @app.teardown_appcontext
 def close_db(exception):
     """Closes the database again at the end of the request."""
-    if hasattr(g, 'postgres_db'):
-        g.postgres_db.close()
+    if hasattr(g, 'postgres_db_loader'):
+        g.postgres_db_loader.close()
+    if hasattr(g, 'postgres_db_saver'):
+        g.postgres_db_saver.close()
 
 
 def app_init():

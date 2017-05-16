@@ -6,15 +6,17 @@
         });
     }
 
-    //! fill in the select with all chemicals
+    //! load all the chemicals from db and fill in the dropdown list
     CHEMICALS.load_all_chemicals(fill_in_chemicals);
-
+    //console.log($("input").length);
     // chemical list change event handler
     $("#chemical_list").on('change', function () {
         var form = $("#chemical_detail");
         form.validate().resetForm();      // clear out the validation errors
         $("#info_message").html("");
+        //console.log($("input").length);
 
+        // if nothing selected from the dropdown list: it is in insert mode, otherwise update mode
         if ($("option:selected", this).text() == "" || this.value == "") {
             // in insert mode:　reset all the form fields, 
             // reset values to default
@@ -46,10 +48,11 @@
             $('#send').text("Update");
             // disable some fields for editing
             $("#chemical_detail fieldset").prop("disabled", true);
+            //console.log($("input").length);
         }
     });
 
-    // sumbit the change/new
+    // submit the change/new
     $("#chemical_detail").validate({
         //errorPlacement: function (label, element) {
         //    label.addClass('error help-inline');
@@ -107,13 +110,33 @@
             }
         },
         submitHandler: function (form) {
+            var request = {};
             // get the chemical id
             var chem_id = $("#chemical_list option:selected").val();
             var insert_mode = false;
-            if (chem_id == null || chem_id == "") // insert mode
+            if (chem_id == null || chem_id == "") {// insert mode
+                request["chem_id"] = null;
                 insert_mode = true;
-            // todo: get all the field
-            var request = {};
+            }
+            else
+                request["chem_id"] = chem_id;
+
+            // get all input field value
+            console.log($("input").length);
+            console.log($("form#chemical_detail input").length);
+            $("form#chemical_detail input").each(function () {
+                var name = $(this).attr("name");
+                var value = $(this).val();
+                if (name != "")
+                    request[name] = value;
+            });
+            // get dropdown list value
+            $("form#chemical_detail select").each(function () {
+                var name = $(this).attr("name");
+                var value = $("option:selected", this).val();
+                request[name] = value;
+            });
+
             $.ajax({
                 url: url_post_chemical,
                 type: 'post',
@@ -141,6 +164,7 @@
         }
     });
 
+    //! reset button onclick event handler
     $("#reset").on("click", function () {
         var form = $("#chemical_detail");
         form.validate().resetForm();      // clear out the validation errors
