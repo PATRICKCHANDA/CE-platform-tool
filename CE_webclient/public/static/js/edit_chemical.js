@@ -144,7 +144,8 @@
                 data: JSON.stringify(request),
                 contentType: 'application/json; charset=utf-8',
                 success: function (data) {
-                    console.log(data.msg);
+                    $("#info_message").html(data.msg);
+                    //console.log(data.msg);
                 }
             });
         },

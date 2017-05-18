@@ -16,35 +16,35 @@ insert into public.chemical values(14, 'Terepthalic acid(TA)',  '¶Ô±½¶þ¼×Ëá',166
 insert into public.chemical values(15, 'Nitrogen',  'Òºµª', 28,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
 
 -- public.reaction_formula
-insert into public.reaction_formula values(1, '»·ÑõÒÒÍé(EO)', 200, 20, '(-106.7-1327*(1/c-1))'); -- attention: do not divide by 3600, which is conversion from kJ to kWh
-insert into public.reaction_formula values(2, 'ÒÒ´¼°·(MEA, DEA/TEA)', 200, 20, '-125/c');
-insert into public.reaction_formula values(3, '¶Ô±½¶þ¼×Ëá(TA)', 150, 15, '-21200/c');
-insert into public.reaction_formula values(4, 'Òº»¯ÆøÌå', 130, -192, '0');
+insert into public.reaction_formula values(1, '»·ÑõÒÒÍé(EO)', 200, 20, '(-106.7-1327*(1/c-1))',NULL); -- attention: do not divide by 3600, which is conversion from kJ to kWh
+insert into public.reaction_formula values(2, 'ÒÒ´¼°·(MEA, DEA/TEA)', 200, 20, '-125/c', '1');
+insert into public.reaction_formula values(3, '¶Ô±½¶þ¼×Ëá(TA)', 150, 15, '-21200/c',NULL);
+insert into public.reaction_formula values(4, 'Òº»¯ÆøÌå', -192, 130, '0',NULL);
 
 -- public.reaction_product, the formula for quantity is based on the excel sheet
-insert into public.reaction_product values(3, 1, '1', 'moles');
-insert into public.reaction_product values(4, 1, '2*(1-c)/c', 'moles');
-insert into public.reaction_product values(5, 1, '2*(1-c)/c', 'moles');
-insert into public.reaction_product values(7, 2, '1', 'moles');
-insert into public.reaction_product values(8, 2, '(62/c-61)/115', 'moles');
-insert into public.reaction_product values(14, 3, '1', 'moles');
-insert into public.reaction_product values(5, 3, '2/c', 'moles');
-insert into public.reaction_product values(2, 4, '1', 'moles');
-insert into public.reaction_product values(15, 4, '1.142857', 'moles');
+insert into public.reaction_product values(3, 1, '1', 'moles', false);
+insert into public.reaction_product values(4, 1, '2*(1-c)/c', 'moles',true);
+insert into public.reaction_product values(5, 1, '2*(1-c)/c', 'moles',true);
+insert into public.reaction_product values(7, 2, '1', 'moles',false);
+insert into public.reaction_product values(8, 2, '(62/c-61)/115', 'moles', false);
+insert into public.reaction_product values(14, 3, '1', 'moles', false);
+insert into public.reaction_product values(5, 3, '2/c', 'moles', true);
+insert into public.reaction_product values(2, 4, '1', 'moles',false);
+insert into public.reaction_product values(15, 4, '1.142857', 'moles',false);
 
 
 -- public.reaction_reactant (should be checked by the application since the conversion value can be changed)
 -- or a database procedure
-insert into public.reaction_reactant values(1, 1, '1/c', 'moles', -1, null);
-insert into public.reaction_reactant values(2, 1, '1/c * c * 0.5 + 1/c * (1-c) * 3', 'moles', -1, null);
-insert into public.reaction_reactant values(3, 2, '1/c', 'moles', 1, null);
-insert into public.reaction_reactant values(6, 2, '1/c', 'moles', 1, null);
-insert into public.reaction_reactant values(9, 3, '1/c', 'moles', -1, null);  -- p-xylene
-insert into public.reaction_reactant values(10, 3, '1/(c * c * 0.21)', 'moles', -1, null); -- air
-insert into public.reaction_reactant values(11, 3, '0.13833', 'moles', -1, true); -- acedic acid
-insert into public.reaction_reactant values(12, 3, '4.15', 'moles', -1, true); -- normal water
-insert into public.reaction_reactant values(13, 3, '0.140678', 'moles', -1, true); -- Co
-insert into public.reaction_reactant values(10, 4, '1', 'moles', -1, null); -- air
+insert into public.reaction_reactant values(1, 1, '1/c', 'moles', null);
+insert into public.reaction_reactant values(2, 1, '1/c * c * 0.5 + 1/c * (1-c) * 3', 'moles', null);
+insert into public.reaction_reactant values(3, 2, '1/c', 'moles', null);
+insert into public.reaction_reactant values(6, 2, '1/c', 'moles', null);
+insert into public.reaction_reactant values(9, 3, '1/c', 'moles', null);  -- p-xylene
+insert into public.reaction_reactant values(10, 3, '1/(c * c * 0.21)', 'moles', null); -- air
+insert into public.reaction_reactant values(11, 3, '0.13833', 'moles', true); -- acedic acid
+insert into public.reaction_reactant values(12, 3, '4.15', 'moles', true); -- normal water
+insert into public.reaction_reactant values(13, 3, '0.140678', 'moles', true); -- Co
+insert into public.reaction_reactant values(10, 4, '1', 'moles', null); -- air
 -- select * from public.reaction_reactant;
 
 -- public.emission_data

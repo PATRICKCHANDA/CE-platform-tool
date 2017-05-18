@@ -90,18 +90,25 @@ def add_a_productline_to_factory(rf_id, factory_id):
 def update_chemical():
     content = request.get_json()
     db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
-    db_saver.update_chemical(content)
+    result = db_saver.update_chemical(content)
     db_saver.close()
-    return jsonify(msg="update chemical succeed.")
+    if result[0]:
+        return jsonify(msg="编辑化工品成功(update chemical succeed.)")
+    else:
+        return jsonify(msg=result[1])
 
 
 @app.route('/setReactionformula', methods=['POST'])
 def update_reaction_formula():
     content = request.get_json()
     db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
-    db_saver.update_reaction_formula(content)
+    result = db_saver.update_reaction_formula(content)
+    if result[0]:
+        message = True
+    else:
+        message = result[1]
     db_saver.close()
-    return jsonify(msg='update chemical process succeed.')
+    return jsonify(msg=message)
 
 
 @app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])

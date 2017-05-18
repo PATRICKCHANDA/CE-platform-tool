@@ -31,7 +31,6 @@ class RFReactant(RFComponent):
         RFComponent.__init__(self, info)
         # it is a formula to calculate # of moles in order to product 1 moles product
         self.quantity_ratio = info.GetField('quantity')
-        self.__prev_reaction_formula_id = info.GetField('prev_reaction_formula_id')
         if info.GetField('catalyst') is None or info.GetField('catalyst') == False:
             self.is_catalyst = False
         else:
@@ -47,6 +46,11 @@ class ReactionFormula:
         self.temperature = info.GetField('temperature')
         self.pressure = info.GetField('pressure')
         self.heat_reaction_formula = info.GetField('heat_reaction')
+        temp_ids = info.GetField('upstream_formula_ids')
+        self.__upstream_formula_ids = None
+        if temp_ids:
+            self.__upstream_formula_ids = info.GetField('upstream_formula_ids').split(",")
+            self.__upstream_formula_ids = [int(i) for i in self.__upstream_formula_ids]
         self.__reactants = {}
         self.__products = {}
         self.add_reaction_component(info, is_product)

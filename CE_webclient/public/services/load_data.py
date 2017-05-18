@@ -340,8 +340,7 @@ class DataLoader:
             self.conn.ReleaseResultSet(lyr)
             return rt_util_types
 
-
-
+    @staticmethod
     def check_layer_capabilities(self, layer):
         capabilities = [
             ogr.OLCRandomRead,
