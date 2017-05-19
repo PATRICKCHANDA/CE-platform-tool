@@ -20,5 +20,42 @@ function changeLayout(btn_clicked) {
         $("#btn_full_view > i").toggleClass("fa-minus-circle");
         collapse();
     }
+    if ($("#btn_full_view > i").hasClass("fa-plus-circle"))
+        return true;
+    else
+        return false;
+}
+
+//! show the scenario compare part, hidden all other parts
+function show_scenario_compare(info_analysis_col_collapsed) {
+    if (!$("div#scenario_compare-col").hasClass("col-md-12")) {
+        // open part
+        // collapse map column
+        $("div#map-col").toggleClass("collapse");
+        
+
+        $("div#scenario_compare-col").toggleClass("collapse");
+        $("div#scenario_compare-col").toggleClass("col-md-12");
+    }
+    else {
+        // close the scenario_compare-col part
+
+        // un-collapse map-col
+        $("div#map-col").toggleClass("collapse");
+        // collapse scenari_compare-col
+        $("div#scenario_compare-col").toggleClass("collapse");
+        $("div#scenario_compare-col").toggleClass("col-md-12");
+
+    }
+
+    // restore the info-col and analysis-col
+    if (!info_analysis_col_collapsed) {
+        // collapse the info and analysis block
+        $("#info-col").toggleClass("collapse");
+        $("#info-col").toggleClass("col-md-4");
+
+        $("#analysis-col").toggleClass("collapse");
+        $("#analysis-col").toggleClass("col-md-4");
+    }
 }
 

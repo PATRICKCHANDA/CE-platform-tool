@@ -46,10 +46,16 @@ $(document).ready(function () {
 //	              ]
 //    };
 //    L.geoJSON(data).addTo(mymap);
-    $("#btn_full_view").on('click', function() {
-        changeLayout(true);
+    var info_analysis_col_collapsed = true;
+    $("#btn_full_view").on('click', function () {
+        info_analysis_col_collapsed = changeLayout(true);
         mymap.invalidateSize();
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
+    });
+
+    $("#btn_scenario_compare").on('click', function () {
+        show_scenario_compare(info_analysis_col_collapsed);
+        mymap.invalidateSize();
     });
 
     /* \brief display the name of the product and an input field
