@@ -129,6 +129,8 @@ def update_factory_productline(factory_id, rf_id):
     product_id = content['id']
     a_productline = factories[factory_id].factory_product_lines[rf_id]
 
+    analyzer.compare_begin()
+    # while True:
     # 1. update the CE_analyzer: minus the info from the CE_analyzer
     analyzer.process_factory_product_line_info(factory_id, a_productline, False)
 
@@ -140,6 +142,13 @@ def update_factory_productline(factory_id, rf_id):
 
     # 3. update the CE_analyzer: ADD the info into the CE_analyzer
     analyzer.process_factory_product_line_info(factory_id, a_productline, True)
+
+    # # 4. get the upstream process
+    # for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
+
+    # 4. compare
+    diff = analyzer.compare(all_chemicals, all_utility_info)
+
     if not results[0]:
         return jsonify(msg=results[1])
     return jsonify(msg='succeed processed')

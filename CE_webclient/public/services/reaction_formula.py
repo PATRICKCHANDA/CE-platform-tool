@@ -42,18 +42,43 @@ class ReactionFormula:
     represent the reaction formula: reaction conditions, conversion, and its reactant(s)
     """
     def __init__(self, info, is_product):
+        # reaction name
         self.name = info.GetField('description')
+        # reaction conditions
         self.temperature = info.GetField('temperature')
         self.pressure = info.GetField('pressure')
         self.heat_reaction_formula = info.GetField('heat_reaction')
+
+        # read the upstream formula ids
         temp_ids = info.GetField('upstream_formula_ids')
         self.__upstream_formula_ids = None
         if temp_ids:
             self.__upstream_formula_ids = info.GetField('upstream_formula_ids').split(",")
             self.__upstream_formula_ids = [int(i) for i in self.__upstream_formula_ids]
+        # read the reactants and products
         self.__reactants = {}
         self.__products = {}
         self.add_reaction_component(info, is_product)
+
+        # setup the list of plants' ids using this reaction formula(process)
+        self.__list_factories = []
+
+    def add_factory_id(self, an_id):
+        if an_id not in self.__list_factories:
+            self.__list_factories.append(an_id)
+
+    def add_reaction_component(self, info, is_product):
+        chemical_id = info.GetField('chemical_id')
+        if is_product:
+            self.__products[chemical_id] = RFProduct(info)
+        else:
+            self.__reactants[chemical_id] = RFReactant(info)
+
+    def remove_factory_id(self, an_id):
+        if an_id in self.__list_factories:
+            self.__list_factories.remove(an_id)
+        else:
+            print(an_id, " does not exist in the list of process ", self.name)
 
     @property
     def reactants(self):
@@ -63,12 +88,9 @@ class ReactionFormula:
     def products(self):
         return self.__products
 
-    def add_reaction_component(self, info, is_product):
-        chemical_id = info.GetField('chemical_id')
-        if is_product:
-            self.__products[chemical_id] = RFProduct(info)
-        else:
-            self.__reactants[chemical_id] = RFReactant(info)
+    @property
+    def list_factories(self):
+        return self.__list_factories
 
     @property
     def json_format(self):
@@ -78,3 +100,9 @@ class ReactionFormula:
                 "reactants": [r.json_format for r in self.__reactants.values()],
                 "products": [p.json_format for p in self.__products.values()]
                 }
+
+    @property
+    def upstream_process_ids(self):
+        return self.__upstream_formula_ids
+
+

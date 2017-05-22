@@ -14,6 +14,7 @@
     value < 0: factory use/recycle/treat this item
 """
 import numpy as np
+from collections import deque
 import itertools
 
 SHORT_NAME_CHEMICAL = 'c'
@@ -84,6 +85,7 @@ class CEAnalysis:
         assert(n_rows + n_cols == len(self.dict_obj_id_2_index))
         # create the 2D array
         self.A = np.zeros((n_rows, n_cols), dtype=np.float64)
+        self.__A = self.A.copy()
 
     def get_factory_id_by_index(self, row_index):
         """
@@ -96,16 +98,16 @@ class CEAnalysis:
 
     def get_object_id_by_index(self, col_index):
         """     
-          get the object_id on the items defined in the column
+          get the component object_id on the items defined in the column
         :param col_index: column index of the 2D array
         :return: object_id from the database, which is used as dictionary key in their container respectively
         """
         object_id = self.dict_col_index_2_obj_id.get(col_index)
         if type(object_id) is int:
             if CEAnalysis.OFFSET_CHEMICAL < object_id < CEAnalysis.OFFSET_UTILITY_TYPE:
-                return object_id, SHORT_NAME_CHEMICAL
+                return object_id - CEAnalysis.OFFSET_CHEMICAL, SHORT_NAME_CHEMICAL
             elif CEAnalysis.OFFSET_UTILITY_TYPE < object_id < CEAnalysis.OFFSET_EMISSION:
-                return object_id, SHORT_NAME_UTILITY_TYPE
+                return object_id - CEAnalysis.OFFSET_UTILITY_TYPE, SHORT_NAME_UTILITY_TYPE
         else:
             # since the column name for emission starts with 'emis_', so we return a substring of the column name
             return object_id[5:], SHORT_NAME_EMISSION
@@ -213,6 +215,33 @@ class CEAnalysis:
             # add per factory
             self.process_factory_information(factory_id, factory, plus)
 
+    def compare_begin(self):
+        self.__A = self.A.copy()
+
+    def compare(self, all_chemical, all_utility_type):
+        """
+        compare the update array with the original array 
+        :return: a dictionary of {item_name: (num before change, num after change), ......}
+        """
+        # sum on each column original  __A
+        sum_ori = self.__A.sum(axis=0)
+        # sum on each column current A
+        sum_curt = self.A.sum(axis=0)
+        # get the non-zero elements' location
+        diff_array = np.where((sum_curt - sum_ori) != 0)
+        result = {}
+        for i in diff_array[0]:
+            component = self.get_object_id_by_index(i)
+            component_name = component[1]
+            if component_name == SHORT_NAME_CHEMICAL:
+                component_name = all_chemical[component[0]].name
+            elif component_name == SHORT_NAME_UTILITY_TYPE:
+                component_name = all_utility_type[component[0]].name
+            elif component_name == SHORT_NAME_EMISSION:
+                component_name = component[0]
+            result[component_name] = (abs(sum_ori[i]), abs(sum_curt[i]), sum_curt[i]-sum_ori[i])
+        return result
+
     @property
     def json_format(self):
         return {'id2idx': self.dict_obj_id_2_index,
@@ -220,3 +249,34 @@ class CEAnalysis:
                 'cIdx2id': self.dict_col_index_2_obj_id
                 }
 
+
+def traverse_to_upstream_process(analyzer, content, factories, curt_factory_id, curt_rf_id, all_emission_data, all_utility_info, all_chemicals, all_reactions):
+    product_id = content['id']
+    analyzer.compare_begin()
+
+    queue_rf_id = deque([{curt_rf_id: [curt_factory_id]}])
+
+    while len(queue_rf_id) > 0:
+        an_item = queue_rf_id.popleft()
+        # pop up a reaction formula
+        rf_id, factory_ids = next(iter(an_item))
+
+        #
+        a_productline = factories[factory_id].factory_product_lines[rf_id]
+        analyzer.process_factory_product_line_info(factory_id, a_productline, False)
+
+        # 2. update the specific product_line of this factory
+        if rf_id in all_emission_data:
+            results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+        else:
+            results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+
+        # 3. update the CE_analyzer: ADD the info into the CE_analyzer
+        analyzer.process_factory_product_line_info(factory_id, a_productline, True)
+
+        # # 4. get the upstream process
+        for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
+            queue_rf_id.append(upstream_rf_id)
+
+    # 4. compare
+    diff = analyzer.compare(all_chemicals, all_utility_info)

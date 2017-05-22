@@ -229,7 +229,7 @@ class DataLoader:
               + 'where a.object_id=b.factory_id AND b.desired_chemical_id=c.object_id'
         lyr = self.conn.ExecuteSQL(sql)
         if lyr is None:
-            print("[ERROR SQL]: ", sql , self.__db_name, "@", self.__db_server)
+            print("[ERROR SQL]: ", sql, self.__db_name, "@", self.__db_server)
             return
         else:
             if __debug__:
@@ -239,6 +239,10 @@ class DataLoader:
             for feature in lyr:
                 factory_id = feature.GetField('factory_id')
                 rf_id = feature.GetField('reaction_formula_id')
+
+                # add factory id into reactions
+                reactions[rf_id].add_factory_id(factory_id)
+
                 # check
                 if rf_id not in reactions:
                     print("[ERROR]: No reaction formula is found for ", rf_id)
@@ -441,24 +445,20 @@ if __name__ == "__main__":
     # construct a analyzer
     analyzer = CEAnalysis(test_factories, all_chemicals, all_utility_info, all_emission_data)
     # fill in the data
-    for factory_id, factory in test_factories.items():
-        for rf_id, product_line in factory.factory_product_lines.items():
-            info = product_line.factory_process_json
-            # factory products
-            for product in info['products']:
-                # get product object_id
-                analyzer.set_value(factory_id, product['id'], 'c', product['quantity'])
-            # by-products
-            for byproduct in info['by_products']:
-                analyzer.set_value(factory_id, byproduct['id'], 'c', byproduct['quantity'])
-            # material
-            for material in info['material']:
-                analyzer.set_value(factory_id, material['id'], 'c', -material['quantity'])
-            # utilities
-            # todo: factory may provide utility services,
-            for utility in info['utilities']:
-                analyzer.set_value(factory_id, utility['id'], 'u', -utility['quantity'])
-            # emissions
-            for emission in info['emissions']:
-                analyzer.set_value(factory_id, emission['name'], 'e', emission['quantity'])
+    analyzer.process_all_factories_information(test_factories)
+
+    # # test
+    # a_productline = test_factories[2].factory_product_lines[1]
+    # # 1. update the CE_analyzer: minus the info from the CE_analyzer
+    # analyzer.process_factory_product_line_info(2, a_productline, False)
+    #
+    # # 2. update the specific product_line of this factory
+    # if 1 in all_emission_data:
+    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals,
+    #                                                 all_emission_data[rf_id])
+    # else:
+    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+    #
+    # # 3. update the CE_analyzer: ADD the info into the CE_analyzer
+    # analyzer.process_factory_product_line_info(factory_id, a_productline, True)
     input("press any key to quit...")
