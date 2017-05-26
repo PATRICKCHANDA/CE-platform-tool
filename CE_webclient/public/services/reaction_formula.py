@@ -20,7 +20,7 @@ class RFProduct(RFComponent):
     def __init__(self, info):
         RFComponent.__init__(self, info)
         self.quantity = info.GetField('quantity')
-        # self.is_byproduct = info.GetField('byproduct')
+        self.is_byproduct = info.GetField('byproduct')
 
 
 class RFReactant(RFComponent):
@@ -48,6 +48,7 @@ class ReactionFormula:
         self.temperature = info.GetField('temperature')
         self.pressure = info.GetField('pressure')
         self.heat_reaction_formula = info.GetField('heat_reaction')
+        self.default_conversion = info.GetField('default_conversion')
 
         # read the upstream formula ids
         temp_ids = info.GetField('upstream_formula_ids')

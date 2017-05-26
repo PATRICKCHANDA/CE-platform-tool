@@ -1,8 +1,7 @@
 from flask import Flask, render_template, jsonify, redirect, url_for, request, make_response, g
 from services.load_data import DataLoader, create_an_ogrfeature
 from services.save_data import DataSaver
-from services.ce_analysis import CEAnalysis, SHORT_NAME_FACTORY, SHORT_NAME_EMISSION, \
-    SHORT_NAME_UTILITY_TYPE, SHORT_NAME_CHEMICAL
+from services.ce_analysis import CEAnalysis, traverse_to_upstream_process, prepare_upstream_process
 
 app = Flask(__name__)
 factories = {}
@@ -13,18 +12,81 @@ all_emission_data = {}
 analyzer = None
 
 
-@app.route('/')
-def index():
-    return render_template("index.html")
+@app.route('/addRftoFactory/<int:rf_id>/<int:factory_id>', methods=['POST'])
+def add_a_product_line_to_factory(rf_id, factory_id):
+    """
+    add a new product line into the factory
+    :param factory_id: 
+    :param rf_id: new product line id, which is the reaction_formula id 
+    :return: 
+    """
+    global analyzer
 
-"""
-    functions render the page
-"""
+    # todo: from client side, post enough information
+    content = request.get_json()
+    # if 'product_chem_id' not in content:
+    #     return jsonify({'error': 'no product_chem_id information'})
+    # if 'quantity' not in content:
+    #     return jsonify({'error': 'no quantity information'})
+    # product_chem_id = content['product_chem_id']
+    # product_chem_id_quantity = content['quantity']
+
+    if factory_id not in factories:
+        return jsonify({'error': "unknown factory_id " + str(factory_id)})
+    if rf_id in factories[factory_id].factory_product_lines:
+        return jsonify({"info": "process existed already in the factory."})
+    if rf_id not in all_reactions:
+        return jsonify({"error": "unknown process in the system."})
+    factory = factories[factory_id]
+    # todo? those data should be acquired from content
+
+    # create a feature, add the reference chemical first into the productline, this will setup the reference
+    # chemical and quantity for this product line
+    feature = {"desired_chemical_id": int(content['ref_chemical_id']),
+               "desired_quantity": content['ref_chemical_quantity'],
+               "unit": 'T',  # the unit of the input quantity is T
+               "days_of_production": 340,
+               "hours_of_production": 24,
+               "inlet_temperature": 20,
+               "inlet_pressure": 1,
+               "level_reactions": -1,
+               "conversion": all_reactions[rf_id].default_conversion,
+               "percent_heat_removed": 0.02
+               }
+    factory.add_product_line(feature, rf_id, all_reactions, all_chemicals)
+
+    # add other products of this product line, should based on user input, currently we add all products
+    for chem_id, quantity in content['products'].items():
+        feature['desired_chemical_id'] = int(chem_id)
+        feature['desired_quantity'] = quantity
+        # add the product line, which will add 1 product of this product line(reaction/process)
+        factory.add_product_line(feature, rf_id, all_reactions, all_chemicals)
+
+    factory.calculate_byproducts_per_product_line(all_chemicals)
+    factory.calculate_emission_per_product_line(all_emission_data)
+    factory.calculate_utilities_per_product_line(all_utility_info, all_chemicals)
+    print(url_for('get_factory_products', factory_id=factory_id))
+
+    # update the CE_analyzer: add the factory product line info
+    analyzer.compare_begin()
+    analyzer.process_factory_product_line_info(factory_id, factory.factory_product_lines[rf_id], True)
+    quantity_per_compnent = analyzer.calc_total_quantity_per_component()
+    # find the upstream process
+    new_entries = prepare_upstream_process(all_reactions, analyzer, quantity_per_compnent, rf_id)
+    # do calculation
+    results = traverse_to_upstream_process(analyzer, new_entries, factories, factory_id, rf_id, all_emission_data,
+                                           all_utility_info, all_chemicals, all_reactions)
+    # todo: send the results back to client
+    return redirect(url_for("get_factory_products", factory_id=factory_id))
 
 
-@app.route('/area-overview')
-def overview():
-    return render_template("area_overview.html")
+@app.teardown_appcontext
+def close_db(exception):
+    """Closes the database again at the end of the request."""
+    if hasattr(g, 'postgres_db_loader'):
+        g.postgres_db_loader.close()
+    if hasattr(g, 'postgres_db_saver'):
+        g.postgres_db_saver.close()
 
 
 @app.route('/chemicals')
@@ -35,123 +97,6 @@ def edit_chemical_page():
 @app.route('/chemical-processes')
 def edit_chemical_process_page():
     return render_template("edit_chemical_process.html")
-
-
-"""
-functions get the request from the client side
-"""
-
-
-@app.route('/addRftoFactory/<int:rf_id>/<int:factory_id>')
-def add_a_productline_to_factory(rf_id, factory_id):
-    """
-    add a new product line into the factory
-    :param factory_id: 
-    :param rf_id: new product line id, which is the reaction_formula id 
-    :return: 
-    """
-    global analyzer
-    if factory_id not in factories:
-        return jsonify({'error': "unknown factory_id " + str(factory_id)})
-    if rf_id in factories[factory_id].factory_product_lines:
-        return jsonify({"info": "process existed already in the factory."})
-    if rf_id not in all_reactions:
-        return jsonify({"error": "unknown process in the system."})
-    factory = factories[factory_id]
-    # create a feature
-    # todo: those data should be acquired via Database after user has add a process information into a factory
-    # todo: currently we create a feature
-    # db_loader = get_db()
-    # db_loader.get_factory_product(factory_id, rf_id)
-    # db_loader.close()
-    field_names = ["desired_chemical_id", "desired_quantity", ("unit", 1), "days_of_production", "hours_of_production",
-     "inlet_temperature", "inlet_pressure", "level_reactions", "conversion", "percent_heat_removed"]
-    field_types = ["I", "I", "S", "I", "I", "F", "F", "I", "F", "F"]
-    # if there are more than 1 products in this process, choose the one whose quantity is 1
-    product_chem_id = next(iter(all_reactions[rf_id].products.keys()))
-    values = [product_chem_id, 45199, 'T', 340, 24, 20, 1, -1, 0.7, 0.02]
-    # todo: add other products of this productline, should based on user input, currently we add all products
-    for chem_id, detail in all_reactions[rf_id].products.items():
-        values[0] = chem_id
-        feature = create_an_ogrfeature(field_names, field_types, values)
-        # add the product line, which will add 1 product of this product line
-        factory.add_product_line(feature, rf_id, all_reactions, all_chemicals)
-
-    factory.calculate_byproducts_per_product_line(all_chemicals)
-    factory.calculate_emission_per_product_line(all_emission_data)
-    factory.calculate_utilities_per_product_line(all_utility_info, all_chemicals)
-    print(url_for('get_factory_products', factory_id=factory_id))
-    # update the CE_analyzer: add the factory product line info
-    analyzer.process_factory_product_line_info(factory_id, factory.factory_product_lines[rf_id], True)
-    return redirect(url_for("get_factory_products", factory_id=factory_id))
-
-
-@app.route('/setChemical', methods=['POST'])
-def update_chemical():
-    content = request.get_json()
-    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
-    result = db_saver.update_chemical(content)
-    db_saver.close()
-    if result[0]:
-        return jsonify(msg="编辑化工品成功(update chemical succeed.)")
-    else:
-        return jsonify(msg=result[1])
-
-
-@app.route('/setReactionformula', methods=['POST'])
-def update_reaction_formula():
-    content = request.get_json()
-    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
-    result = db_saver.update_reaction_formula(content)
-    if result[0]:
-        message = True
-    else:
-        message = result[1]
-    db_saver.close()
-    return jsonify(msg=message)
-
-
-@app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
-def update_factory_productline(factory_id, rf_id):
-    """
-    (re)calculate a factory's one product line(process), including the material, byproducts, emissions, utilities
-    :param factory_id: 
-    :param rf_id: reaction_formula_id
-    :return: 
-    """
-    content = request.get_json()
-    if __debug__:
-        print(content)
-    if factory_id not in factories:
-        return jsonify({"error": "unknown factory_id " + str(factory_id)})
-    if rf_id not in factories[factory_id].factory_product_lines:
-        return jsonify({"error": "unknown reaction_formula_id " + str(rf_id) + " in factory " + str(factory_id)})
-    product_id = content['id']
-    a_productline = factories[factory_id].factory_product_lines[rf_id]
-
-    analyzer.compare_begin()
-    # while True:
-    # 1. update the CE_analyzer: minus the info from the CE_analyzer
-    analyzer.process_factory_product_line_info(factory_id, a_productline, False)
-
-    # 2. update the specific product_line of this factory
-    if rf_id in all_emission_data:
-        results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
-    else:
-        results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
-
-    # 3. update the CE_analyzer: ADD the info into the CE_analyzer
-    analyzer.process_factory_product_line_info(factory_id, a_productline, True)
-
-    # # 4. get the upstream process
-    # for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
-
-    # 4. compare
-    diff = analyzer.compare(all_chemicals, all_utility_info)
-
-    if not results[0]:
-        return jsonify(msg=results[1])
-    return jsonify(msg='succeed processed')
 
 
 # http://stackoverflow.com/questions/32288722/call-python-function-from-js
@@ -256,15 +201,108 @@ def get_whole_area_revenue():
     return jsonify(total_revenue, unit)
 
 
-@app.teardown_appcontext
-def close_db(exception):
-    """Closes the database again at the end of the request."""
-    if hasattr(g, 'postgres_db_loader'):
-        g.postgres_db_loader.close()
-    if hasattr(g, 'postgres_db_saver'):
-        g.postgres_db_saver.close()
+@app.route('/')
+def index():
+    return render_template("index.html")
 
 
+@app.route('/area-overview')
+def overview():
+    return render_template("area_overview.html")
+
+
+"""
+functions get the request from the client side
+"""
+
+
+@app.route('/setChemical', methods=['POST'])
+def update_chemical():
+    """
+    update existed chemical or insert new chemical
+    :return: 
+    """
+    content = request.get_json()
+    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
+    result = db_saver.update_chemical(content)
+    db_saver.close()
+    if result[0]:
+        return jsonify(msg="编辑化工品成功(update chemical succeed.)")
+    else:
+        return jsonify(msg=result[1])
+
+
+@app.route('/setReactionformula', methods=['POST'])
+def update_reaction_formula():
+    """
+    insert new reaction formula
+    :return: 
+    """
+    content = request.get_json()
+    db_saver = get_db(False)  # DataSaver('localhost', 'CE_platform', 'Han', 'Han')
+    result = db_saver.update_reaction_formula(content)
+    if result[0]:
+        message = True
+    else:
+        message = result[1]
+    db_saver.close()
+    return jsonify(msg=message)
+
+
+@app.route('/calcFactoryProductLine/<int:factory_id>/<int:rf_id>', methods=['POST'])
+def update_factory_product_line(factory_id, rf_id):
+    """
+    (re)calculate a factory's one product line(process), including the material, byproducts, emissions, utilities
+    :param factory_id: 
+    :param rf_id: reaction_formula_id
+    :return: 
+    """
+    content = request.get_json()
+    if __debug__:
+        print(content)
+    if factory_id not in factories:
+        return jsonify({"error": "unknown factory_id " + str(factory_id)})
+    if rf_id not in factories[factory_id].factory_product_lines:
+        return jsonify({"error": "unknown reaction_formula_id " + str(rf_id) + " in factory " + str(factory_id)})
+    # product_id = content['id']
+    # a_productline = factories[factory_id].factory_product_lines[rf_id]
+
+    # get current quantity
+    curt_product_id = content['desired_chemical_id']
+    curt_quantity = factories[factory_id].factory_product_lines[rf_id].products[curt_product_id].quantity
+    # calc and save extra quantity: because if there are factories bond with process, need to UPDATE the total quantity
+    content['desired_quantity'] = content['desired_quantity'] - curt_quantity  # >0:increase;  <0: decrease
+    new_entry = [{rf_id: ([factory_id], content)}]
+    analyzer.compare_begin()
+    results = traverse_to_upstream_process(analyzer, new_entry, factories, factory_id, rf_id, all_emission_data,
+                                           all_utility_info, all_chemicals, all_reactions)
+    # analyzer.compare_begin()
+    # # while True:
+    # # 1. update the CE_analyzer: minus the info from the CE_analyzer
+    # analyzer.process_factory_product_line_info(factory_id, a_productline, False)
+    #
+    # # 2. update the specific product_line of this factory
+    # if rf_id in all_emission_data:
+    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+    # else:
+    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+    #
+    # # 3. update the CE_analyzer: ADD the info into the CE_analyzer
+    # analyzer.process_factory_product_line_info(factory_id, a_productline, True)
+    #
+    # # # 4. get the upstream process
+    # # for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
+    #
+    # # 4. compare
+    # diff = analyzer.compare(all_chemicals, all_utility_info)
+
+    if not results[0]:
+        return jsonify(msg=results[1])
+    return jsonify(results[1])
+
+
+#-----------------------------------
+#-----------------------------------
 def app_init():
     """
     server initialization

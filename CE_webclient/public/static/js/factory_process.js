@@ -86,8 +86,8 @@ function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_proce
     var all_rows = $("#process_input > table tbody tr");
     if (all_rows.length > 0) {
         // the first row: cell 1 with id as chem_id, value is the quantity, otherwise we will get sth. like 2:100000, hard to use on server side
-        request_content.id = parseInt(all_rows[0].cells[1].id);
-        request_content.quantity = Number(all_rows[0].cells[1].innerHTML);
+        request_content.desired_chemical_id = parseInt(all_rows[0].cells[1].id);
+        request_content.desired_quantity = Number(all_rows[0].cells[1].innerHTML);
         price_name = all_rows[0].cells[3].id;
         price_value = Number(all_rows[0].cells[3].innerHTML);
         request_content[price_name] = price_value;

@@ -16,10 +16,10 @@ insert into public.chemical values(14, 'Terepthalic acid(TA)',  '对苯二甲酸',166
 insert into public.chemical values(15, 'Nitrogen',  '液氮', 28,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
 
 -- public.reaction_formula
-insert into public.reaction_formula values(1, '环氧乙烷(EO)', 200, 20, '(-106.7-1327*(1/c-1))',NULL); -- attention: do not divide by 3600, which is conversion from kJ to kWh
-insert into public.reaction_formula values(2, '乙醇胺(MEA, DEA/TEA)', 200, 20, '-125/c', '1');
-insert into public.reaction_formula values(3, '对苯二甲酸(TA)', 150, 15, '-21200/c',NULL);
-insert into public.reaction_formula values(4, '液化气体', -192, 130, '0',NULL);
+insert into public.reaction_formula values(1, '环氧乙烷(EO)', 200, 20, '(-106.7-1327*(1/c-1))',NULL, 0.86); -- attention: do not divide by 3600, which is conversion from kJ to kWh
+insert into public.reaction_formula values(2, '乙醇胺(MEA, DEA/TEA)', 200, 20, '-125/c', '1', 0.7);
+insert into public.reaction_formula values(3, '对苯二甲酸(TA)', 150, 15, '-21200/c',NULL, 0.95);
+insert into public.reaction_formula values(4, '液化气体', -192, 130, '0',NULL, 0.99);
 
 -- public.reaction_product, the formula for quantity is based on the excel sheet
 insert into public.reaction_product values(3, 1, '1', 'moles', false);

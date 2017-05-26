@@ -266,7 +266,8 @@ class FactoryProcess:
             ref_chem_info = all_chem_info[self.__ref_product_chem_id]
             self.create_a_reference_product(a_product, ref_chem_info, product_chemical_id, quantity, unit)
 
-        # if this product is an existed process, then the ref_product should already be created
+        # if this product is produced by an existed process, then the ref_product should already be created
+        # then the product's MPS and quantity should conform to the ratio between itself and the ref product
         if not new_product_line:
             # update the moles per second to consistent with reference
             a_product.moles_per_second = self.__calc_mps_from_ref(product_chemical_id)
@@ -507,38 +508,42 @@ class FactoryProcess:
         :return: 
         """
         # update the process info
-        self.days_of_production = contents['DOP']
-        self.hours_of_production = contents['HOP']
-        self.conversion = contents['conversion']
+        if 'DOP' in contents.keys():
+            self.days_of_production = contents['DOP']
+        if 'HOP' in contents.keys():
+            self.hours_of_production = contents['HOP']
+        if 'conversion' in contents.keys():
+            self.conversion = contents['conversion']
         if product_chemical_id not in self.__products:
             return [False, "unknown product_id " + product_chemical_id + " in reaction_formula " + self.rf_name]
 
         a_product = self.__products[product_chemical_id]
         # 1. update product quantity
-        a_product.quantity = contents['quantity']
+        a_product.quantity = contents['desired_quantity']
         # update its MPS(moles per second)
         a_product.calculate_moles_per_second(all_chem_info[product_chemical_id].molar_mass, self.production_time)
         # update ref_product info, which will change the MPS of the reference product
         self.__calc_ref_product_info(a_product.moles_per_second, product_chemical_id, all_chem_info[self.__ref_product_chem_id])
         # 2. update product value
-        new_value_per_unit = contents['value_per_unit_' + str(product_chemical_id)]
-        # update the local price: the price of the component will not affect other factory having the component
-        a_product.value_per_unit = new_value_per_unit
-        a_product.calculate_product_value(all_chem_info[product_chemical_id], new_value_per_unit)
+        if 'value_per_unit_' + str(product_chemical_id) in contents.keys():
+            new_value_per_unit = contents['value_per_unit_' + str(product_chemical_id)]
+            # update the local price: the price of the component will not affect other factory having the component
+            a_product.value_per_unit = new_value_per_unit
+        a_product.calculate_product_value(all_chem_info[product_chemical_id], a_product.value_per_unit)
 
-        # updates also other products of this production line!
+        # updates also other products quantity and value of this production line!!!
         for chem_id, other_product in self.__products.items():
             if chem_id != product_chemical_id:
                 chem_info = all_chem_info[chem_id]
                 # update quantity
                 other_product.moles_per_second = self.__calc_mps_from_ref(chem_id)
                 other_product.calculate_quantity(chem_info.molar_mass, self.production_time)
-                # update value per unit, both in the Chemical and ProcessProduct
-                new_value_per_unit = contents['value_per_unit_' + str(chem_id)]
-                other_product.value_per_unit = new_value_per_unit
+                # update value per unit of chemical for this product line of this factory
+                if 'value_per_unit_' + str(product_chemical_id) in contents.keys():
+                    new_value_per_unit = contents['value_per_unit_' + str(chem_id)]
+                    other_product.value_per_unit = new_value_per_unit
                 # recalculate the product value
-                other_product.calculate_product_value(all_chem_info[chem_id], new_value_per_unit)
-        # todo: update the __ref_product's moles_per_second!
+                other_product.calculate_product_value(all_chem_info[chem_id], other_product.value_per_unit)
 
         # 3. update material consumption
         succeed = a_product.calculate_materials(self.__ref_product.moles_per_second, self.__material, self.conversion,
@@ -652,13 +657,13 @@ class Factory:
         :param chemicals_info: dictionary of all chemicals
         :return:
         """
-        product_chem_id = factory_reaction_info.GetField('desired_chemical_id')
+        product_chem_id = factory_reaction_info['desired_chemical_id']
         if product_chem_id not in chemicals_info:
             print('[ERROR] in function add_product_line(): Unknown chemical [', product_chem_id, '] in the database')
             return
 
-        quantity = factory_reaction_info.GetField('desired_quantity')
-        quantity_unit = factory_reaction_info.GetField('unit')
+        quantity = factory_reaction_info['desired_quantity']
+        quantity_unit = factory_reaction_info['unit']
 
         # per reaction formula may have more than 1 products (although the chance is small?), in this case, all the
         # products share the same material
@@ -667,13 +672,13 @@ class Factory:
             new_product_line = True
             # setup the FactoryProcess with basic process information
             self.__product_lines[rf_id] = FactoryProcess(rf_info=reaction_formulas_info[rf_id],
-                                                         DOP=factory_reaction_info.GetField('days_of_production'),
-                                                         HOP=factory_reaction_info.GetField('hours_of_production'),
-                                                         inlet_T=factory_reaction_info.GetField('inlet_temperature'),
-                                                         inlet_P=factory_reaction_info.GetField('inlet_pressure'),
-                                                         level_R=factory_reaction_info.GetField('level_reactions'),
-                                                         conversion=factory_reaction_info.GetField('conversion'),
-                                                         perc_heat_removed=factory_reaction_info.GetField('percent_heat_removed')
+                                                         DOP=factory_reaction_info['days_of_production'],
+                                                         HOP=factory_reaction_info['hours_of_production'],
+                                                         inlet_T=factory_reaction_info['inlet_temperature'],
+                                                         inlet_P=factory_reaction_info['inlet_pressure'],
+                                                         level_R=factory_reaction_info['level_reactions'],
+                                                         conversion=factory_reaction_info['conversion'],
+                                                         perc_heat_removed=factory_reaction_info['percent_heat_removed']
                                                          )
         # the product_line existed, this product need to added, but its quantity should be consistent with the reference
         # add the target product

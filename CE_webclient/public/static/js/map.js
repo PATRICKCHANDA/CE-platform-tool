@@ -58,14 +58,18 @@ $(document).ready(function () {
         mymap.invalidateSize();
     });
 
-    /* \brief display the name of the product and an input field
+    /* \brief display the name of the product, an input field
     */
     function add_label_and_textfield(div, label_name, chemical_id) {
         var $new_row = $('<div class="row"></div>');
-        var label = '<label class="col-sm-6" chemical_id="' + chemical_id + '">' + label_name + ':</label>';
-        var textfield = '<input type="text" class="col-sm-4" value=100000>';
+        var label = '<label class="col-sm-2" chemical_id="' + chemical_id + '">产量(吨):</label>';
+        var check_box = '<input type="checkbox" class="col-sm-1" name="desired_chemical_id" value=' + chemical_id + '>' + label_name
+        var textfield = '<input type="number" class="col-sm-3" value=100000>';
+        var ref_chem = '<input type="radio" class="col-sm-1" name="ref_chem" value=' +chemical_id + '>';
+        $new_row.append(ref_chem);
         $new_row.append(label);
         $new_row.append(textfield);
+        $new_row.append(check_box);
         div.append($new_row);
     }
 
@@ -79,7 +83,7 @@ $(document).ready(function () {
             //var markup = '<option value="' + +rf_id + '">' + process_detail.rf_name + '</option>';
             $select.append($markup);
         });
-        // todo: draw a chart to show the material input and the products!
+        // todo (future request): draw a chart to show the material input and the products!
     };
 
     $("#all_processes_info .panel-heading > select").on('change', function (e) {
@@ -93,6 +97,10 @@ $(document).ready(function () {
             chem_name = CHEMICALS.get_name(product_ids[i]);
             add_label_and_textfield($div, chem_name, product_ids[i]);
         }
+        // select the first radio button by default
+        $div.find("input:checkbox").prop("checked", true);
+        // set the first as reference
+        $div.find("input:radio:first").prop("checked", true);
     });
 
     /* \brief btn_add_process_to_factory onclick event: which send the request to server: adding the process into the factory, and
@@ -110,34 +118,54 @@ $(document).ready(function () {
             return;
         }
 
-        var request_content = {};
-        // loop through each row with label and input
+        var request_content = { products: {}};
+        // loop through each row with label and input, if a process has more than 1 products, specify the reference product,
+        // which is used as the basis quantity
         $("#process_product_name_quantity").children('div').each(function () {
-            var chemical_id = $(this).children('label').attr('chemical_id');
-            var volume = $(this).children('input').val();
-            request_content[chemical_id] = volume;
+            var volume = $(this).children('input[type="number"]').val();
+            // only if the radio button is selected, then we consider this as desired chemical, the other output will be
+            // calculated according to the quantity of the quantity of the desired chemcial
+            var ref_chemical_id = $(this).children('input:radio:checked').val();
+            if (ref_chemical_id) {
+                request_content.ref_chemical_id = +ref_chemical_id;
+                request_content.ref_chemical_quantity = +volume;
+            }
+            else {
+                var chemical_id = $(this).children('input:checkbox:checked').val();
+                request_content.products[chemical_id] = +volume
+            }
         });
 
         // TODO: post the data to the server!
-        // add this reaction_formula into factory
-        url = url_insert_rf_to_factory + rf_id + "/" + g_factory_id;
-        $.getJSON(url)
+        // add this reaction_formula into factory and the quantity
+        // post the data to server
+        $.ajax({
+            type: "POST",
+            url: url_insert_rf_to_factory + rf_id + "/" + g_factory_id,
+            data: JSON.stringify(request_content),
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8'
+        })
         .done(function (data) {
             if (data) {
-                if (data.hasOwnProperty('info'))
+                if (data.hasOwnProperty('info')) {
                     $("#info_add_process").text(data.info);
-                else if (data.hasOwnProperty('error'))
+                    return;
+                }
+                else if (data.hasOwnProperty('error')) {
                     $("#info_add_process").text(data.error);
+                    return;
+                }
                 else
                     $("#info_add_process").text("");
-                display_factory_processes_info(g_factory_id, data);
                 // display
                 // show value of the factory
                 // show added value of the whole area
+                display_factory_processes_info(g_factory_id, data);
                 //OVERVIEW.show_area_total_revenue();
             }
         })
-        .fail(function (status, err) {
+        .fail(function (err) {
             console.log("Error: failed to add process to factory ", factory_id);
         })
     });

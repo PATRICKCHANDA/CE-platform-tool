@@ -13,6 +13,7 @@
     value > 0: factory produce/supply this item
     value < 0: factory use/recycle/treat this item
 """
+from services.factory_data import Factory
 import numpy as np
 from collections import deque
 import itertools
@@ -21,6 +22,8 @@ SHORT_NAME_CHEMICAL = 'c'
 SHORT_NAME_UTILITY_TYPE = 'u'
 SHORT_NAME_EMISSION = 'e'
 SHORT_NAME_FACTORY = 'f'
+DUMMY_FACTORY_ID = 1E8
+CURT_DUMMY_FACTORY_ID = DUMMY_FACTORY_ID
 
 
 class CEAnalysis:
@@ -86,6 +89,16 @@ class CEAnalysis:
         # create the 2D array
         self.A = np.zeros((n_rows, n_cols), dtype=np.float64)
         self.__A = self.A.copy()
+
+    def append_new_factory(self, factory_id):
+        row_index, num_cols = self.A.shape
+        unique_factory_id = CEAnalysis.__generate_unique_obj_id(factory_id, SHORT_NAME_FACTORY)
+        # save the index
+        self.dict_obj_id_2_index[unique_factory_id] = row_index
+        self.dict_row_index_2_obj_id[row_index] = unique_factory_id
+        # append the new row
+        new_row = [[0 for i in range(num_cols)]]
+        self.A = np.append(self.A, new_row, axis=0)
 
     def get_factory_id_by_index(self, row_index):
         """
@@ -215,6 +228,13 @@ class CEAnalysis:
             # add per factory
             self.process_factory_information(factory_id, factory, plus)
 
+    def calc_total_quantity_per_component(self):
+        # # sum on each column original  __A
+        # sum_ori = self.__A.sum(axis=0)
+        # # sum on each column current A
+        # sum_curt = self.A.sum(axis=0)
+        return self.A.sum(axis=0)
+
     def compare_begin(self):
         self.__A = self.A.copy()
 
@@ -228,9 +248,9 @@ class CEAnalysis:
         # sum on each column current A
         sum_curt = self.A.sum(axis=0)
         # get the non-zero elements' location
-        diff_array = np.where((sum_curt - sum_ori) != 0)
+        diff_idx = np.where((sum_curt - sum_ori) != 0)
         result = {}
-        for i in diff_array[0]:
+        for i in diff_idx[0]:
             component = self.get_object_id_by_index(i)
             component_name = component[1]
             if component_name == SHORT_NAME_CHEMICAL:
@@ -239,8 +259,18 @@ class CEAnalysis:
                 component_name = all_utility_type[component[0]].name
             elif component_name == SHORT_NAME_EMISSION:
                 component_name = component[0]
-            result[component_name] = (abs(sum_ori[i]), abs(sum_curt[i]), sum_curt[i]-sum_ori[i])
+            result[component_name] = ((sum_ori[i]), (sum_curt[i]), sum_curt[i]-sum_ori[i])
         return result
+
+    def remove_factory_contribution(self, factory_ids):
+        if len(factory_ids) > 0:
+            row_indices = [self.get_index_by_id(i, SHORT_NAME_FACTORY) for i in factory_ids]
+            self.A = np.delete(self.A, row_indices, axis=0)
+            # remove from the container
+            for i in factory_ids:
+                del self.dict_obj_id_2_index[i]
+            for i in row_indices:
+                del self.dict_row_index_2_obj_id[i]
 
     @property
     def json_format(self):
@@ -250,33 +280,162 @@ class CEAnalysis:
                 }
 
 
-def traverse_to_upstream_process(analyzer, content, factories, curt_factory_id, curt_rf_id, all_emission_data, all_utility_info, all_chemicals, all_reactions):
-    product_id = content['id']
-    analyzer.compare_begin()
+def traverse_to_upstream_process(analyzer,
+                                 queue_items,
+                                 factories,
+                                 curt_factory_id,
+                                 curt_rf_id,
+                                 all_emission_data,
+                                 all_utility_info,
+                                 all_chemicals,
+                                 all_reactions
+                                 ):
+    """
+    calculate the emission,consumption, etc. of the current reaction, then calculate that of its upstream process, until
+    there are no more upstream process
+    :param analyzer: 
+    :param queue_items: 
+    :param factories: 
+    :param curt_factory_id: 
+    :param curt_rf_id: 
+    :param all_emission_data: 
+    :param all_utility_info: 
+    :param all_chemicals: 
+    :param all_reactions: 
+    :return: 
+    """
+    global CURT_DUMMY_FACTORY_ID
+    queue_rf_id = deque([])
+    queue_rf_id.extend(queue_items)
+    # # get current quantity
+    # curt_product_id = post_data['desired_chemical_id']
+    # if curt_factory_id in factories:
+    #     curt_quantity = factories[curt_factory_id].factory_product_lines[curt_rf_id].products[curt_product_id].quantity
+    # else:
+    #     curt_quantity = 0
+    # # if post_data['quantity'] != curt_quantity:
+    # # calc and save extra quantity: because if there are factories bond with process, need to UPDATE the total quantity
+    # post_data['desired_quantity'] = post_data['desired_quantity'] - curt_quantity  # >0:increase;  <0: decrease
+    # # initial the queue, which is the current process
+    # queue_rf_id = deque([{curt_rf_id: ([curt_factory_id], post_data)}])
 
-    queue_rf_id = deque([{curt_rf_id: [curt_factory_id]}])
-
+    # analyzer.compare_begin()
+    counter = 0
     while len(queue_rf_id) > 0:
+        counter += 1
+        # popup a reaction formula, and its related data
         an_item = queue_rf_id.popleft()
-        # pop up a reaction formula
-        rf_id, factory_ids = next(iter(an_item))
+        rf_id, detail = next(iter(an_item.items()))
+        factory_ids, feature = detail
+        product_id = feature['desired_chemical_id']
+        # extra_quantity = feature['quantity']
+        # get the factory id,
+        # for an upstream process, there could be more than one factory produce the same product, but we assign
+        # the new volume only to 1 factory
+        if factory_ids is not None:
+            factory_id = factory_ids[0]
+            # 1. get the product-line detail of this factory
+            a_productline = factories[factory_id].factory_product_lines[rf_id]
+            # remove emission, consumption from the analyzer
+            analyzer.process_factory_product_line_info(factory_id, a_productline, False)
+            # update the current quantity of this product in this factory
+            feature['desired_quantity'] += a_productline.products[product_id].quantity
+            # 2. update the specific product_line of this factory
+            if rf_id in all_emission_data:
+                results = a_productline.update_process_line(feature, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+                if not results[0]:
+                    return results
+            else:
+                results = a_productline.update_process_line(feature, product_id, all_utility_info, all_chemicals, None)
+                if not results[0]:
+                    return results
+            # 3. update the CE_analyzer: ADD the info into the CE_analyzer
+            analyzer.process_factory_product_line_info(factory_id, a_productline, True)
+        else:  # no factories are bond with the process, create dummy factory
+            # make a dummy factory
+            new_factory_id = CURT_DUMMY_FACTORY_ID + counter
+            dummy_factory_info = {"id": new_factory_id,
+                                  'properties': {'name': 'dummy', 'category': 'petrochemical'},
+                                  'geometry': None
+                                  }
+            dummy_factory = Factory(dummy_factory_info)
+            # add a product line
+            dummy_factory.add_product_line(feature, rf_id, all_reactions, all_chemicals)
+            dummy_factory.calculate_byproducts_per_product_line(all_chemicals)
+            dummy_factory.calculate_emission_per_product_line(all_emission_data)
+            dummy_factory.calculate_utilities_per_product_line(all_utility_info, all_chemicals)
+            # save the factory
+            factories[new_factory_id] = dummy_factory
+            # save the factory id into all reactions
+            all_reactions[rf_id].add_factory_id(new_factory_id)
+            # increase one row in the array in the Analyzer
+            analyzer.append_new_factory(new_factory_id)
+            analyzer.process_factory_product_line_info(new_factory_id, dummy_factory.factory_product_lines[rf_id], True)
 
-        #
-        a_productline = factories[factory_id].factory_product_lines[rf_id]
-        analyzer.process_factory_product_line_info(factory_id, a_productline, False)
+        # calculate the volume difference of all related component after calculating this process
+        quantity_per_component = analyzer.calc_total_quantity_per_component()
+        new_entries = prepare_upstream_process(all_reactions, analyzer, quantity_per_component, rf_id)
+        queue_rf_id.extend(new_entries)
 
-        # 2. update the specific product_line of this factory
-        if rf_id in all_emission_data:
-            results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
+    # save the current max dummy factory id, in case of next time use
+    CURT_DUMMY_FACTORY_ID += counter
+    diff_result = analyzer.compare(all_chemicals, all_utility_info)
+    # 4. final compare to return the results
+    return [True, diff_result]
+
+
+def prepare_upstream_process(all_reactions, analyzer, quantity_per_comp, rf_id):
+    results = []
+    # identify all the input material, make sure the upstream process does produce the input material
+    list_input = all_reactions[rf_id].reactants.keys()
+    # 4. get the upstream process id of the current reaction formula, and also the output of upstream process
+    for upstream_rf_id in (all_reactions[rf_id].upstream_process_ids or []):
+        list_output_upstream_process = all_reactions[upstream_rf_id].products.keys()
+        # find which input(s) of current process are supplied by the the upstream process
+        common_product_ids = set(list_output_upstream_process).intersection(set(list_input))
+        if common_product_ids is None:
+            continue
+        # if more than 1 inputs are supplied, we only need to specify 1 of them,
+        # the others will be handled in calculation
+        a_product_id = common_product_ids.pop()
+        # get the volume of this product that needs to be produced by this upstream process
+        col_index = analyzer.get_index_by_id(a_product_id, SHORT_NAME_CHEMICAL)
+        quantity = quantity_per_comp[col_index]
+        # if quantity < 0, we are lacking of the product, need to produce more!
+        #    quantity > 0: we need less of the product, need to produce less!
+        if all_reactions[upstream_rf_id].list_factories is not None:
+            # there are factories, we do update on the factory, we setup the content like this:
+            tmp = {"desired_chemical_id": a_product_id,
+                   "desired_quantity": -quantity
+                   }
         else:
-            results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
+            # extra_quantity > 0 --> decrease the production, however, there is no factory(even no dummy factory)
+            # linked with this process, but we will create dummy factory to handle it
 
-        # 3. update the CE_analyzer: ADD the info into the CE_analyzer
-        analyzer.process_factory_product_line_info(factory_id, a_productline, True)
+            # there are no actual factories for this process, we will create factory, so we setup content like this
+            tmp = {"desired_chemical_id": a_product_id,
+                   # always make it positive, since dummy factory need to produce
+                   "desired_quantity": abs(quantity),
+                   "unit": 'T',
+                   "days_of_production": 340,
+                   "hours_of_production": 24,
+                   "inlet_temperature": 20,
+                   "inlet_pressure": 1,
+                   "level_reactions": -1,
+                   "conversion": all_reactions[rf_id].default_conversion,
+                   "percent_heat_removed": 0.02
+                   }
+        # push upstream process in the queue
+        results.append({upstream_rf_id: (all_reactions[upstream_rf_id].list_factories, tmp)})
+    return results
 
-        # # 4. get the upstream process
-        for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
-            queue_rf_id.append(upstream_rf_id)
 
-    # 4. compare
-    diff = analyzer.compare(all_chemicals, all_utility_info)
+def remove_dummy_factory(factories, analyzer):
+    global CURT_DUMMY_FACTORY_ID
+    # get list of key whose value > DUMMY_FACTORY_ID
+    factory_ids = [i for i in factories.keys() if i > DUMMY_FACTORY_ID]
+    analyzer.remove_factory_contribution(factory_ids)
+    for i in (factory_ids or []):
+        del factories[i]
+    # reset
+    CURT_DUMMY_FACTORY_ID = DUMMY_FACTORY_ID

@@ -34,6 +34,7 @@ def create_an_ogrfeature(fieldnames, fieldtypes, fieldvalues):
         a_feature.SetField(i, fieldvalues[i])
     return a_feature
 
+
 def get_all_drivers():
     """
     get all the drivers GDAL supports
@@ -237,8 +238,11 @@ class DataLoader:
                 for i in range(lyr_defn.GetFieldCount()):
                     print(lyr_defn.GetFieldDefn(i).GetName())
             for feature in lyr:
-                factory_id = feature.GetField('factory_id')
-                rf_id = feature.GetField('reaction_formula_id')
+                feature_json = json.loads(feature.ExportToJson())['properties']
+                factory_id = feature_json['factory_id']
+                rf_id = feature_json['reaction_formula_id']
+                # factory_id = feature.GetField('factory_id')
+                # rf_id = feature.GetField('reaction_formula_id')
 
                 # add factory id into reactions
                 reactions[rf_id].add_factory_id(factory_id)
@@ -247,7 +251,7 @@ class DataLoader:
                 if rf_id not in reactions:
                     print("[ERROR]: No reaction formula is found for ", rf_id)
                 if factory_id in factories:
-                    factories[factory_id].add_product_line(feature, rf_id, reactions, chemicals)
+                    factories[factory_id].add_product_line(feature_json, rf_id, reactions, chemicals)
                 else:
                     print('[ERROR]: Unknown factory id in table', DataLoader.lyr_factory_reaction_product)
             # important: reset the reading
