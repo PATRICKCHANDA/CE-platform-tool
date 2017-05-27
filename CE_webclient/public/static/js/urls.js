@@ -9,3 +9,4 @@ var url_insert_rf_to_factory = "/addRftoFactory/";  // add reaction formula to a
 var url_whole_area_revenue = "/getTotalRevenue";
 var url_post_reaction_formula = "/setReactionformula";
 var url_post_chemical = "/setChemical";
+var url_get_whole_area_diff = "/getDifference";

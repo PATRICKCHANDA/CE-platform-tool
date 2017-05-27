@@ -130,7 +130,6 @@ function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_proce
                 $("#factory_total_profit > h5").text(factory_total_profit + " " + value_unit);
                 // todo: for performance -> update the tables instead of clear then rebuild the table
                 display_a_product_process_details(factory_id, data);
-
         })
         .fail (function (status, err) {
             console.log("Error: failed to load product from factory", factory_id);
@@ -143,9 +142,8 @@ function apply_model_basis_info_changes(factory_id, rf_id, profit_of_other_proce
  \param product_line_info: 1 product line information including product(s), byproduct(s), material, emission
  */
 function display_a_product_process_details(factory_id, product_line_info) {
-    // each product_line may have more than 1 product!
-    // the total revenue of a specified product line, a factory may contain more than 1 product line
-    // and a product_line may contain more than 1 product!
+    // a factory may contain more than 1 product line, which may have more than 1 product!
+    // the total revenue of a specified product line is the sum of all of its products
     var total_value = 0;
     var value_unit = "";
     for (var i=0; i< product_line_info.products.length;++i) {

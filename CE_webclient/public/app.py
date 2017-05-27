@@ -76,8 +76,10 @@ def add_a_product_line_to_factory(rf_id, factory_id):
     # do calculation
     results = traverse_to_upstream_process(analyzer, new_entries, factories, factory_id, rf_id, all_emission_data,
                                            all_utility_info, all_chemicals, all_reactions)
-    # todo: send the results back to client
-    return redirect(url_for("get_factory_products", factory_id=factory_id))
+    if results[0] is False:
+        return jsonify(error=results[1])
+    else:
+        return redirect(url_for("get_factory_products", factory_id=factory_id))
 
 
 @app.teardown_appcontext
@@ -201,6 +203,12 @@ def get_whole_area_revenue():
     return jsonify(total_revenue, unit)
 
 
+@app.route("/getDifference")
+def get_difference_of_whole_area():
+    diff_result = analyzer.compare(all_chemicals, all_utility_info, factories)
+    return jsonify(diff_result)
+
+
 @app.route('/')
 def index():
     return render_template("index.html")
@@ -276,29 +284,9 @@ def update_factory_product_line(factory_id, rf_id):
     analyzer.compare_begin()
     results = traverse_to_upstream_process(analyzer, new_entry, factories, factory_id, rf_id, all_emission_data,
                                            all_utility_info, all_chemicals, all_reactions)
-    # analyzer.compare_begin()
-    # # while True:
-    # # 1. update the CE_analyzer: minus the info from the CE_analyzer
-    # analyzer.process_factory_product_line_info(factory_id, a_productline, False)
-    #
-    # # 2. update the specific product_line of this factory
-    # if rf_id in all_emission_data:
-    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, all_emission_data[rf_id])
-    # else:
-    #     results = a_productline.update_process_line(content, product_id, all_utility_info, all_chemicals, None)
-    #
-    # # 3. update the CE_analyzer: ADD the info into the CE_analyzer
-    # analyzer.process_factory_product_line_info(factory_id, a_productline, True)
-    #
-    # # # 4. get the upstream process
-    # # for upstream_rf_id in all_reactions[rf_id].upstream_process_ids:
-    #
-    # # 4. compare
-    # diff = analyzer.compare(all_chemicals, all_utility_info)
-
     if not results[0]:
         return jsonify(msg=results[1])
-    return jsonify(results[1])
+    return jsonify(msg=results[1])
 
 
 #-----------------------------------

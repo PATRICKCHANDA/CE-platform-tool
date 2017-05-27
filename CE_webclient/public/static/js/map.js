@@ -46,16 +46,35 @@ $(document).ready(function () {
 //	              ]
 //    };
 //    L.geoJSON(data).addTo(mymap);
-    var info_analysis_col_collapsed = true;
     $("#btn_full_view").on('click', function () {
-        info_analysis_col_collapsed = changeLayout(true);
+        changeLayout(true);
         mymap.invalidateSize();
 //        setTimeout(function() {mymap.invalidateSize()}, 400); // doesn't seem to do anything
     });
 
     $("#btn_scenario_compare").on('click', function () {
-        show_scenario_compare(info_analysis_col_collapsed);
+        show_scenario_compare();
         mymap.invalidateSize();
+
+        if ($("div#scenario_compare-col").hasClass("col-md-12")) {
+            // get the difference after a change of capacity or add a new process to factory
+            $.getJSON(url_get_whole_area_diff)
+            .done(function (data) {
+                console.log("data received");
+                for (var property in data) {
+                    if (data.hasOwnProperty(property)) {
+                        row_data = data[property]
+                        origin = row_data[0];
+                        current = row_data[1];
+                        diff = row_data[2];
+                        console.log(property, origin, current, diff);
+                    }
+                }
+            })
+            .fail(function (status, err) {
+                console.log("Error: Failed to get scenario comparison data.");
+            });
+        }
     });
 
     /* \brief display the name of the product, an input field
@@ -136,7 +155,7 @@ $(document).ready(function () {
             }
         });
 
-        // TODO: post the data to the server!
+        // post the data to the server!
         // add this reaction_formula into factory and the quantity
         // post the data to server
         $.ajax({
@@ -160,7 +179,6 @@ $(document).ready(function () {
                     $("#info_add_process").text("");
                 // display
                 // show value of the factory
-                // show added value of the whole area
                 display_factory_processes_info(g_factory_id, data);
                 //OVERVIEW.show_area_total_revenue();
             }

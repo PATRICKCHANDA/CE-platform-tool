@@ -86,9 +86,12 @@ class CEAnalysis:
         n_rows = len(self.dict_row_index_2_obj_id)
         n_cols = len(self.dict_col_index_2_obj_id)
         assert(n_rows + n_cols == len(self.dict_obj_id_2_index))
-        # create the 2D array
+        # create the 2D array and make a copy
         self.A = np.zeros((n_rows, n_cols), dtype=np.float64)
         self.__A = self.A.copy()
+        # get the total margin and make a copy
+        self.total_margin = self.calc_total_margin(all_factory)
+        self.__prev_total_margin = list(self.total_margin)
 
     def append_new_factory(self, factory_id):
         row_index, num_cols = self.A.shape
@@ -99,6 +102,15 @@ class CEAnalysis:
         # append the new row
         new_row = [[0 for i in range(num_cols)]]
         self.A = np.append(self.A, new_row, axis=0)
+
+    def calc_total_margin(self, all_factories):
+        total_revenue = 0
+        unit = ""
+        for factory in all_factories.values():
+            total_revenue += factory.factory_revenue[0]
+            if factory.factory_revenue[1] != '':
+                unit = factory.factory_revenue[1]
+        return [total_revenue, unit]
 
     def get_factory_id_by_index(self, row_index):
         """
@@ -237,8 +249,9 @@ class CEAnalysis:
 
     def compare_begin(self):
         self.__A = self.A.copy()
+        self.__prev_total_margin = list(self.total_margin)
 
-    def compare(self, all_chemical, all_utility_type):
+    def compare(self, all_chemical, all_utility_type, all_factory):
         """
         compare the update array with the original array 
         :return: a dictionary of {item_name: (num before change, num after change), ......}
@@ -260,6 +273,10 @@ class CEAnalysis:
             elif component_name == SHORT_NAME_EMISSION:
                 component_name = component[0]
             result[component_name] = ((sum_ori[i]), (sum_curt[i]), sum_curt[i]-sum_ori[i])
+
+        self.total_margin = self.calc_total_margin(all_factory)
+        key_name = 'Total Margin' + self.total_margin[1]
+        result[key_name] = (self.__prev_total_margin[0], self.total_margin[0], self.total_margin[0] - self.__prev_total_margin[0])
         return result
 
     def remove_factory_contribution(self, factory_ids):
@@ -379,9 +396,9 @@ def traverse_to_upstream_process(analyzer,
 
     # save the current max dummy factory id, in case of next time use
     CURT_DUMMY_FACTORY_ID += counter
-    diff_result = analyzer.compare(all_chemicals, all_utility_info)
+
     # 4. final compare to return the results
-    return [True, diff_result]
+    return [True, "whole process chain updating is succeed"]
 
 
 def prepare_upstream_process(all_reactions, analyzer, quantity_per_comp, rf_id):
