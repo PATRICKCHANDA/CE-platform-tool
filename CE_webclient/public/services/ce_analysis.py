@@ -266,16 +266,17 @@ class CEAnalysis:
         for i in diff_idx[0]:
             component = self.get_object_id_by_index(i)
             component_name = component[1]
+            # todo: get the unit (confirm for the emission)
             if component_name == SHORT_NAME_CHEMICAL:
-                component_name = all_chemical[component[0]].name
+                component_name = all_chemical[component[0]].name + "(" + all_chemical[component[0]].unit + ")"
             elif component_name == SHORT_NAME_UTILITY_TYPE:
-                component_name = all_utility_type[component[0]].name
+                component_name = all_utility_type[component[0]].name + "(" + all_utility_type[component[0]].unit + ")"
             elif component_name == SHORT_NAME_EMISSION:
-                component_name = component[0]
+                component_name = component[0] + "(T)"
             result[component_name] = ((sum_ori[i]), (sum_curt[i]), sum_curt[i]-sum_ori[i])
 
         self.total_margin = self.calc_total_margin(all_factory)
-        key_name = 'Total Margin' + self.total_margin[1]
+        key_name = 'Total Margin(' + self.total_margin[1] + ')'
         result[key_name] = (self.__prev_total_margin[0], self.total_margin[0], self.total_margin[0] - self.__prev_total_margin[0])
         return result
 

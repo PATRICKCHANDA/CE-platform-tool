@@ -61,21 +61,43 @@ $(document).ready(function () {
             $.getJSON(url_get_whole_area_diff)
             .done(function (data) {
                 console.log("data received");
-                for (var property in data) {
-                    if (data.hasOwnProperty(property)) {
-                        row_data = data[property]
-                        origin = row_data[0];
-                        current = row_data[1];
-                        diff = row_data[2];
-                        console.log(property, origin, current, diff);
-                    }
-                }
+                add_scenario_comparison_to_table(data);
+                //for (var property in data) {
+                //    if (data.hasOwnProperty(property)) {
+                //        row_data = data[property]
+                //        origin = row_data[0];
+                //        current = row_data[1];
+                //        diff = row_data[2];
+                //        console.log(property, origin, current, diff);
+                //    }
+                //}
             })
             .fail(function (status, err) {
                 console.log("Error: Failed to get scenario comparison data.");
             });
         }
     });
+
+    /*  \brief display the scenario comparison results in the table
+     */
+    function add_scenario_comparison_to_table(data) {
+        var $table_body = $("#scenario_compare-col > table > tbody");
+        // clear table contents
+        $table_body.find("tr").remove();
+        for (var property in data) {
+            if (data.hasOwnProperty(property)) {
+                row_data = data[property]
+                origin = row_data[0];
+                current = row_data[1];
+                diff = row_data[2];
+                var aRow = $table_body.get(0).appendChild(document.createElement('tr'));
+                aRow.appendChild($('<td>' + property + '</td>').get(0));
+                aRow.appendChild($('<td>' + origin + '</td>').get(0));
+                aRow.appendChild($('<td>' + current + '</td>').get(0));
+                aRow.appendChild($('<td>' + diff + '</td>').get(0));
+            }
+        }
+    }
 
     /* \brief display the name of the product, an input field
     */

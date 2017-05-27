@@ -323,7 +323,8 @@ def app_init():
     analyzer = CEAnalysis(factories, all_chemicals, all_utility_info, all_emission_data)
     # fill in the data
     analyzer.process_all_factories_information(factories)
-
+    # initial the __A and __prev_total_margin
+    analyzer.compare_begin()
     # analyzer_json = jsonify(analyzer)
     print(analyzer)
 
