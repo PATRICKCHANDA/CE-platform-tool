@@ -123,7 +123,7 @@ class CEAnalysis:
 
     def get_object_id_by_index(self, col_index):
         """     
-          get the component object_id on the items defined in the column
+          get the items object_id on the items defined in the column
         :param col_index: column index of the 2D array
         :return: object_id from the database, which is used as dictionary key in their container respectively
         """
@@ -160,7 +160,7 @@ class CEAnalysis:
 
     def get_index_by_id(self, object_id, name):
         """
-        :param object_id: object_id or name(of emission) of the component from database
+        :param object_id: object_id or name(of emission) of the item from database
         :param name: indication of factory, emission ,utility and chemical
         :return: index of one axis of the 2D array 
         """
@@ -171,14 +171,14 @@ class CEAnalysis:
             raise ValueError("[Error]: no index found for " + str(unique_obj_id))
         return index
 
-    def get_factory_ids_by_col_id(self, col_object_id, component_type_name, larger_than_zero):
+    def get_factory_ids_by_col_id(self, col_object_id, item_type_name, larger_than_zero):
         """
         with a known col_object_id, indicating as a chemical, emis, utility, return a list of factory id's
         :param col_object_id: 
-        :param component_type_name: 
+        :param item_type_name: 
         :return: a list of factory_id which produce/supply the chemical or service indicated by the col_object_id
         """
-        col_index = self.get_index_by_id(col_object_id, component_type_name)
+        col_index = self.get_index_by_id(col_object_id, item_type_name)
         # in the array column, get all the entries whose value > 0, which means the factory produce/supply
         # this product or service
         a_column = self.A[:, col_index]
@@ -240,7 +240,7 @@ class CEAnalysis:
             # add per factory
             self.process_factory_information(factory_id, factory, plus)
 
-    def calc_total_quantity_per_component(self):
+    def calc_total_quantity_per_item(self):
         # # sum on each column original  __A
         # sum_ori = self.__A.sum(axis=0)
         # # sum on each column current A
@@ -264,16 +264,16 @@ class CEAnalysis:
         diff_idx = np.where((sum_curt - sum_ori) != 0)
         result = {}
         for i in diff_idx[0]:
-            component = self.get_object_id_by_index(i)
-            component_name = component[1]
+            item = self.get_object_id_by_index(i)
+            item_name = item[1]
             # todo: get the unit (confirm for the emission)
-            if component_name == SHORT_NAME_CHEMICAL:
-                component_name = all_chemical[component[0]].name + "(" + all_chemical[component[0]].unit + ")"
-            elif component_name == SHORT_NAME_UTILITY_TYPE:
-                component_name = all_utility_type[component[0]].name + "(" + all_utility_type[component[0]].unit + ")"
-            elif component_name == SHORT_NAME_EMISSION:
-                component_name = component[0] + "(T)"
-            result[component_name] = ((sum_ori[i]), (sum_curt[i]), sum_curt[i]-sum_ori[i])
+            if item_name == SHORT_NAME_CHEMICAL:
+                item_name = all_chemical[item[0]].name + "(" + all_chemical[item[0]].unit + ")"
+            elif item_name == SHORT_NAME_UTILITY_TYPE:
+                item_name = all_utility_type[item[0]].name + "(" + all_utility_type[item[0]].unit + ")"
+            elif item_name == SHORT_NAME_EMISSION:
+                item_name = item[0] + "(T)"
+            result[item_name] = ((sum_ori[i]), (sum_curt[i]), sum_curt[i]-sum_ori[i])
 
         self.total_margin = self.calc_total_margin(all_factory)
         key_name = 'Total Margin(' + self.total_margin[1] + ')'
@@ -312,7 +312,7 @@ def traverse_to_upstream_process(analyzer,
     calculate the emission,consumption, etc. of the current reaction, then calculate that of its upstream process, until
     there are no more upstream process
     :param analyzer: 
-    :param queue_items: 
+    :param queue_items: initial process information {rf_id : (factory_ids, data)}, data here is the production related parameters
     :param factories: 
     :param curt_factory_id: 
     :param curt_rf_id: 
@@ -369,7 +369,7 @@ def traverse_to_upstream_process(analyzer,
                     return results
             # 3. update the CE_analyzer: ADD the info into the CE_analyzer
             analyzer.process_factory_product_line_info(factory_id, a_productline, True)
-        else:  # no factories are bond with the process, create dummy factory
+        else:  # if no factories are bond with the process, create dummy factory
             # make a dummy factory
             new_factory_id = CURT_DUMMY_FACTORY_ID + counter
             dummy_factory_info = {"id": new_factory_id,
@@ -390,9 +390,10 @@ def traverse_to_upstream_process(analyzer,
             analyzer.append_new_factory(new_factory_id)
             analyzer.process_factory_product_line_info(new_factory_id, dummy_factory.factory_product_lines[rf_id], True)
 
-        # calculate the volume difference of all related component after calculating this process
-        quantity_per_component = analyzer.calc_total_quantity_per_component()
-        new_entries = prepare_upstream_process(all_reactions, analyzer, quantity_per_component, rf_id)
+        # 4. calculate the volume difference of all related item after calculating this process, the quantity difference
+        # is part of the data for the upstream process
+        quantity_per_item = analyzer.calc_total_quantity_per_item()
+        new_entries = prepare_upstream_process(all_reactions, analyzer, quantity_per_item, rf_id)
         queue_rf_id.extend(new_entries)
 
     # save the current max dummy factory id, in case of next time use
@@ -406,7 +407,7 @@ def prepare_upstream_process(all_reactions, analyzer, quantity_per_comp, rf_id):
     results = []
     # identify all the input material, make sure the upstream process does produce the input material
     list_input = all_reactions[rf_id].reactants.keys()
-    # 4. get the upstream process id of the current reaction formula, and also the output of upstream process
+    # get the upstream process id of the current reaction formula, and also the output of upstream process
     for upstream_rf_id in (all_reactions[rf_id].upstream_process_ids or []):
         list_output_upstream_process = all_reactions[upstream_rf_id].products.keys()
         # find which input(s) of current process are supplied by the the upstream process
@@ -428,7 +429,7 @@ def prepare_upstream_process(all_reactions, analyzer, quantity_per_comp, rf_id):
                    }
         else:
             # extra_quantity > 0 --> decrease the production, however, there is no factory(even no dummy factory)
-            # linked with this process, but we will create dummy factory to handle it
+            # linked with this process, but we will create dummy factory to produce the product
 
             # there are no actual factories for this process, we will create factory, so we setup content like this
             tmp = {"desired_chemical_id": a_product_id,

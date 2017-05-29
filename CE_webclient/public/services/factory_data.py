@@ -10,7 +10,7 @@ MEGA = "M"
 NUM_DIGITS = 0
 
 
-class ProcessComponent:
+class ProcessCompound:
     """
     base class for Process-Product/ByProduct/Material
     """
@@ -57,7 +57,7 @@ class ProcessComponent:
         return True
 
     @property
-    def component_json(self):
+    def compound_json(self):
         if self.currency is None:
             return {'id': self.component_id,
                     'name': self.name,
@@ -91,23 +91,23 @@ class ProcessComponent:
         / (molar_mass * production_time)
 
 
-class ProcessByProduct(ProcessComponent):
+class ProcessByProduct(ProcessCompound):
     """
     a process's byproduct
     """
     def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_per_unit, currency, value):
-        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
+        ProcessCompound.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
 
 
-class ProcessMaterial(ProcessComponent):
+class ProcessMaterial(ProcessCompound):
     """
     a process's (reaction) material
     """
     def __init__(self, chem_id, name, mps, quantity, quantity_unit, value_per_unit, currency, value):
-        ProcessComponent.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
+        ProcessCompound.__init__(self, chem_id, mps, quantity, quantity_unit, name, value_per_unit, currency, value)
 
 
-class ProcessProduct(ProcessComponent):
+class ProcessProduct(ProcessCompound):
     """
     a process's product
     """
@@ -121,7 +121,7 @@ class ProcessProduct(ProcessComponent):
         :param value_per_unit: value per unit
         :param currency: currency symbol
         """
-        ProcessComponent.__init__(self, product_chem_id, 1, quantity, quantity_unit, name, value_per_unit, currency)
+        ProcessCompound.__init__(self, product_chem_id, 1, quantity, quantity_unit, name, value_per_unit, currency)
 
     def calculate_product_value(self, chemical_info, local_unit_cost=None):
         """       
@@ -150,9 +150,6 @@ class ProcessProduct(ProcessComponent):
         :param update: if true, create new ProcessMaterial instance, otherwise update the existing ProcessMaterial
         :return: boolean
         """
-        # todo: currently we do NOT consider the secondary reactions which produce the reactant for this product
-        # # step 0. convert the product quantity from unit(here is T)/year to moles/s
-        # self.calculate_moles_per_second(chemicals_info[self.component_id].molar_mass, production_time)
         # step 1. loop through all the reactants info from the reaction_formula, they are all materials!
         for chem_id, reactant in a_reaction_formula.reactants.items():
             if chem_id not in chemicals_info:
@@ -379,10 +376,10 @@ class FactoryProcess:
                 if update and emis_data.name not in self.__emission:
                     print("[ERROR]: Failed to update emission ", emis_data.name, " for reaction ", self.rf_name)
                     return False
-                self.__emission[emis_data.name] = ProcessComponent(-1, None, emis_data.total * a_product.quantity,
-                                                                   a_product.quantity_unit,
-                                                                   emis_data.name,
-                                                                   None, None)
+                self.__emission[emis_data.name] = ProcessCompound(-1, None, emis_data.total * a_product.quantity,
+                                                                  a_product.quantity_unit,
+                                                                  emis_data.name,
+                                                                  None, None)
             return True
 
     # todo: utility calculation needs validation by collega's and the structure and data may be changed!
@@ -439,60 +436,60 @@ class FactoryProcess:
             utility_name = an_utility_info.name_en.lower().strip()
             currency_unit = an_utility_info.currency
             if utility_name == "electricity":
-                self.__utility[obj_id] = ProcessComponent(obj_id, None, electricity * self.production_time,
-                                                          an_utility_info.unit,
-                                                          an_utility_info.name,
-                                                          an_utility_info.unit_cost,
-                                                          currency_unit,
-                                                          -electricity * an_utility_info.unit_cost * self.production_time
-                                                          )
+                self.__utility[obj_id] = ProcessCompound(obj_id, None, electricity * self.production_time,
+                                                         an_utility_info.unit,
+                                                         an_utility_info.name,
+                                                         an_utility_info.unit_cost,
+                                                         currency_unit,
+                                                         -electricity * an_utility_info.unit_cost * self.production_time
+                                                         )
             elif utility_name == "heat reaction":
                 cost_per_year = (1.0 - self.percent_heat_removed_by_cooling_tower)\
                                 * heat_reaction \
                                 * an_utility_info.unit_cost \
                                 * self.production_time
-                self.__utility[obj_id] = ProcessComponent(obj_id,
-                                                          None,
-                                                          heat_reaction * self.production_time,
-                                                          an_utility_info.unit,
-                                                          an_utility_info.name,
-                                                          an_utility_info.unit_cost,
-                                                          currency_unit,
-                                                          -cost_per_year
-                                                          )
+                self.__utility[obj_id] = ProcessCompound(obj_id,
+                                                         None,
+                                                         heat_reaction * self.production_time,
+                                                         an_utility_info.unit,
+                                                         an_utility_info.name,
+                                                         an_utility_info.unit_cost,
+                                                         currency_unit,
+                                                         -cost_per_year
+                                                         )
             elif utility_name == "heat thermal":
-                self.__utility[obj_id] = ProcessComponent(obj_id,
-                                                          None,
-                                                          heat_thermal_mass * self.production_time,
-                                                          an_utility_info.unit,
-                                                          an_utility_info.name,
-                                                          an_utility_info.unit_cost,
-                                                          currency_unit,
-                                                          -heat_thermal_mass * an_utility_info.unit_cost
-                                                          * self.production_time
-                                                          )
+                self.__utility[obj_id] = ProcessCompound(obj_id,
+                                                         None,
+                                                         heat_thermal_mass * self.production_time,
+                                                         an_utility_info.unit,
+                                                         an_utility_info.name,
+                                                         an_utility_info.unit_cost,
+                                                         currency_unit,
+                                                         -heat_thermal_mass * an_utility_info.unit_cost
+                                                         * self.production_time
+                                                         )
             elif utility_name == "make up water":
-                self.__utility[obj_id] = ProcessComponent(obj_id,
-                                                          None,
-                                                          make_up_water * self.production_time,
-                                                          an_utility_info.unit,
-                                                          an_utility_info.name,
-                                                          an_utility_info.unit_cost,
-                                                          currency_unit,
-                                                          -make_up_water * an_utility_info.unit_cost
-                                                          * self.production_time
-                                                          )
+                self.__utility[obj_id] = ProcessCompound(obj_id,
+                                                         None,
+                                                         make_up_water * self.production_time,
+                                                         an_utility_info.unit,
+                                                         an_utility_info.name,
+                                                         an_utility_info.unit_cost,
+                                                         currency_unit,
+                                                         -make_up_water * an_utility_info.unit_cost
+                                                         * self.production_time
+                                                         )
             elif utility_name == "water treatment":
-                self.__utility[obj_id] = ProcessComponent(obj_id,
-                                                          None,
-                                                          water_treatment * self.production_time,
-                                                          an_utility_info.unit,
-                                                          an_utility_info.name,
-                                                          an_utility_info.unit_cost,
-                                                           currency_unit,
-                                                          -water_treatment * an_utility_info.unit_cost
-                                                          * self.production_time
-                                                          )
+                self.__utility[obj_id] = ProcessCompound(obj_id,
+                                                         None,
+                                                         water_treatment * self.production_time,
+                                                         an_utility_info.unit,
+                                                         an_utility_info.name,
+                                                         an_utility_info.unit_cost,
+                                                         currency_unit,
+                                                         -water_treatment * an_utility_info.unit_cost
+                                                         * self.production_time
+                                                         )
             else:
                 print("[Warning:] Unknown ", utility_name)
         return True
@@ -622,11 +619,11 @@ class FactoryProcess:
                 'process_basis': {'DOP': self.days_of_production, 'HOP': self.hours_of_production,
                                   'inlet_T': self.inlet_temperature, 'inlet_P': self.inlet_pressure,
                                   'conversion': self.conversion},
-                'products': [p.component_json for p in self.__products.values()],
-                'by_products': [p.component_json for p in self.__byproducts.values()],
-                'material': [p.component_json for p in self.__material.values()],
-                'emissions': [p.component_json for p in self.__emission.values()],
-                'utilities': [p.component_json for p in self.__utility.values()],
+                'products': [p.compound_json for p in self.__products.values()],
+                'by_products': [p.compound_json for p in self.__byproducts.values()],
+                'material': [p.compound_json for p in self.__material.values()],
+                'emissions': [p.compound_json for p in self.__emission.values()],
+                'utilities': [p.compound_json for p in self.__utility.values()],
                 'process_annual_revenue': self.revenue_per_year[0],
                 'revenue_unit': self.revenue_per_year[1]
                 }

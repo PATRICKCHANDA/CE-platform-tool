@@ -70,7 +70,7 @@ def add_a_product_line_to_factory(rf_id, factory_id):
     # update the CE_analyzer: add the factory product line info
     analyzer.compare_begin()
     analyzer.process_factory_product_line_info(factory_id, factory.factory_product_lines[rf_id], True)
-    quantity_per_compnent = analyzer.calc_total_quantity_per_component()
+    quantity_per_compnent = analyzer.calc_total_quantity_per_item()
     # find the upstream process
     new_entries = prepare_upstream_process(all_reactions, analyzer, quantity_per_compnent, rf_id)
     # do calculation
@@ -130,20 +130,20 @@ def get_all_chemicals():
     return jsonify([(chem_id, chem.json_format) for chem_id, chem in all_chemicals.items()])
 
 
-@app.route('/getFactoryIds/<int:factory_id>/<string:component_type>/<string:component_name>/<int:as_supplier>', methods=['GET'])
-def get_factory_ids_dealing_with_component(factory_id, component_type, component_name, as_supplier):
+@app.route('/getFactoryIds/<int:factory_id>/<string:item_type>/<string:item_name>/<int:as_supplier>', methods=['GET'])
+def get_factory_ids_dealing_with_item(factory_id, item_type, item_name, as_supplier):
     """
-    based on the component type(emission, utility, chemical), and name(string or id), find all factories which use this
+    based on the item type(emission, utility, chemical), and name(string or id), find all factories which use this
     as their input or supply it as their output
     :param factory_id:
-    :param component_type: chemical/emission/utility
-    :param component_name: can be an id or name(emission)
-    :param as_supplier: indicate this factor supply this component, we need to find factory USE this component, 
+    :param item_type: chemical/emission/utility
+    :param item_name: can be an id or name(emission)
+    :param as_supplier: indicate this factor supply this item, we need to find factory USE this item, 
     or another way round.
     :return: json format of a list of id's
     """
     global analyzer
-    ids = analyzer.get_factory_ids_by_col_id(component_name, component_type[0], not as_supplier)
+    ids = analyzer.get_factory_ids_by_col_id(item_name, item_type[0], not as_supplier)
     # get rid of current factory_id
     return jsonify(ids)
 

@@ -117,7 +117,7 @@ class DataLoader:
             lyr.ResetReading()
             return rt_chemicals
 
-    def __get_reaction_formula_components(self, table_name, is_product, rt_reaction_formulas):
+    def __get_reaction_formula_compounds(self, table_name, is_product, rt_reaction_formulas):
         """
         read public.reaction_formula & public.reaction_reactant or public.reaction_product
         :param table_name: reaction_product or reaction_reactant
@@ -144,7 +144,7 @@ class DataLoader:
                 if formula_id not in rt_reaction_formulas:
                     rt_reaction_formulas[formula_id] = ReactionFormula(feature, is_product)
                 else:
-                    rt_reaction_formulas[formula_id].add_reaction_component(feature, is_product)
+                    rt_reaction_formulas[formula_id].add_reaction_compound(feature, is_product)
             # important: reset the reading
             lyr.ResetReading()
             self.conn.ReleaseResultSet(lyr)
@@ -156,9 +156,9 @@ class DataLoader:
         """
         rt_reaction_formulas = dict()
         # add the reactants per reaction formula
-        self.__get_reaction_formula_components(DataLoader.lyr_reaction_reactant, False, rt_reaction_formulas)
+        self.__get_reaction_formula_compounds(DataLoader.lyr_reaction_reactant, False, rt_reaction_formulas)
         # add the products per reaction formula
-        self.__get_reaction_formula_components(DataLoader.lyr_reaction_product, True, rt_reaction_formulas)
+        self.__get_reaction_formula_compounds(DataLoader.lyr_reaction_product, True, rt_reaction_formulas)
         return rt_reaction_formulas
 
     def get_emission_data(self):

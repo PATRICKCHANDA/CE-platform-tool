@@ -90,11 +90,22 @@ $(document).ready(function () {
                 origin = row_data[0];
                 current = row_data[1];
                 diff = row_data[2];
+                var desc = "";
+                if (origin < 0 && diff < 0)
+                    desc = "more required";
+                if (origin < 0 && diff > 0)
+                    desc = "less required";
+                if (origin > 0 && diff < 0)
+                    desc = "less produced";
+                if (origin > 0 && diff > 0)
+                    desc = "more produced";
+
                 var aRow = $table_body.get(0).appendChild(document.createElement('tr'));
                 aRow.appendChild($('<td>' + property + '</td>').get(0));
                 aRow.appendChild($('<td>' + origin + '</td>').get(0));
                 aRow.appendChild($('<td>' + current + '</td>').get(0));
                 aRow.appendChild($('<td>' + diff + '</td>').get(0));
+                aRow.appendChild($('<td>' + desc + '</td>').get(0));
             }
         }
     }

@@ -1,4 +1,4 @@
-class RFComponent:
+class RFCompound:
     def __init__(self, info):
         self.chemical_id = info.GetField('chemical_id')
         self.reaction_formula_id = info.GetField('reaction_formula_id')
@@ -13,22 +13,22 @@ class RFComponent:
                 }
 
 
-class RFProduct(RFComponent):
+class RFProduct(RFCompound):
     """
     represent reaction formula product
     """
     def __init__(self, info):
-        RFComponent.__init__(self, info)
+        RFCompound.__init__(self, info)
         self.quantity = info.GetField('quantity')
         self.is_byproduct = info.GetField('byproduct')
 
 
-class RFReactant(RFComponent):
+class RFReactant(RFCompound):
     """
     represent reaction formula reactant
     """
     def __init__(self, info):
-        RFComponent.__init__(self, info)
+        RFCompound.__init__(self, info)
         # it is a formula to calculate # of moles in order to product 1 moles product
         self.quantity_ratio = info.GetField('quantity')
         if info.GetField('catalyst') is None or info.GetField('catalyst') == False:
@@ -59,7 +59,7 @@ class ReactionFormula:
         # read the reactants and products
         self.__reactants = {}
         self.__products = {}
-        self.add_reaction_component(info, is_product)
+        self.add_reaction_compound(info, is_product)
 
         # setup the list of plants' ids using this reaction formula(process)
         self.__list_factories = []
@@ -68,7 +68,7 @@ class ReactionFormula:
         if an_id not in self.__list_factories:
             self.__list_factories.append(an_id)
 
-    def add_reaction_component(self, info, is_product):
+    def add_reaction_compound(self, info, is_product):
         chemical_id = info.GetField('chemical_id')
         if is_product:
             self.__products[chemical_id] = RFProduct(info)

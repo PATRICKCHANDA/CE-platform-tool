@@ -49,7 +49,7 @@ $(document).ready(function () {
     var line = svg_container.append("line");
     draw_reactionline(line);
 
-    //! fill the chemicals into all <select> components
+    //! fill the chemicals into all <select> elements
     function fill_in_chemicals() {
         $.each(CHEMICALS.get_all_chemicals(), function (id, property) {
             var markup = '<option value="' + +id + '"> ' + property.name + '</option>';
