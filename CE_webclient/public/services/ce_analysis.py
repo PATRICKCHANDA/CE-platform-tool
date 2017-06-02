@@ -420,8 +420,10 @@ def prepare_upstream_process(all_reactions, analyzer, quantity_per_comp, rf_id):
         # get the volume of this product that needs to be produced by this upstream process
         col_index = analyzer.get_index_by_id(a_product_id, SHORT_NAME_CHEMICAL)
         quantity = quantity_per_comp[col_index]
+        #    quantity > 0: we have enough of the product after changing the capacity of DOWNSTREAM process, do nothing!
+        if quantity > 0:
+            continue
         # if quantity < 0, we are lacking of the product, need to produce more!
-        #    quantity > 0: we need less of the product, need to produce less!
         if all_reactions[upstream_rf_id].list_factories is not None:
             # there are factories, we do update on the factory, we setup the content like this:
             tmp = {"desired_chemical_id": a_product_id,
