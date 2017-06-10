@@ -114,7 +114,7 @@ def get_factory():
             feature_collection = {"type": "FeatureCollection", "features": []}
             for v in factories.values():
                 feature_collection["features"].append(v.factory_basic_info_json)
-            print(feature_collection)
+            # print(feature_collection)
             return jsonify(feature_collection)
         else:
             print("factories is NONE.")
