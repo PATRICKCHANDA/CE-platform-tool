@@ -1,3 +1,5 @@
+insert into gaolanport.gaolanport_user(user_name, password) values ('admin', crypt('gaolanport', gen_salt('bf', 8)));
+
 -- public.chemical
 insert into public.chemical values(1, 'Ethylene', '““œ©', 28, 1.26,'C2H4','T', 593, 0, 'EUR', 1530);
 insert into public.chemical values(2, 'Oxygen', '—ı', 32, 1.4,'O2','T', 200, 0, 'EUR', 900);
