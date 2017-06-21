@@ -1,21 +1,32 @@
 insert into gaolanport.gaolanport_user(user_name, password) values ('admin', crypt('gaolanport', gen_salt('bf', 8)));
 
 -- public.chemical
-insert into public.chemical values(1, 'Ethylene', '乙烯', 28, 1.26,'C2H4','T', 593, 0, 'EUR', 1530);
-insert into public.chemical values(2, 'Oxygen', '氧', 32, 1.4,'O2','T', 200, 0, 'EUR', 900);
-insert into public.chemical values(3, 'Ethylene oxide', '环氧乙烷', 44, 0,'C2H4O','T', 800, 0, 'EUR', NULL);
-insert into public.chemical values(4, 'carbon dioxide', '二氧化碳', 44, 0,'CO2','T', 40, 0, 'EUR', NULL);
-insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'EUR', NULL);  -- byproducts
-insert into public.chemical values(6, 'Ammonia', '氨', 18, 0,'NH3','T', 100, 0, 'EUR', NULL);
-insert into public.chemical values(7, 'Ethanolamines(MEA)', '单乙醇胺', 61, 0,'NH2CH2CH2OH','T', 1000, 0, 'EUR', NULL);
-insert into public.chemical values(8, 'Di-Triethaolamines', '二-三乙醇胺', 115, 0,'DEA,TEA','T', 500, 0, 'EUR', NULL);
-insert into public.chemical values(9, 'p-xylene(PX)',       '对二甲苯', 106, 1.26, 'C8H10', 'T',593,0,'EUR',1530);
-insert into public.chemical values(10, 'air',               '空气',    28.84, 1.4, '',        'T', 0, 0, 'EUR', 900);
-insert into public.chemical values(11, 'Acetic acid',       '乙酸',    60,    0, 'CH3COOH', 'T', 300, 0, 'EUR', NULL);
-insert into public.chemical values(12, 'normal water',      '普通水',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL); -- as catalyst
-insert into public.chemical values(13, 'Cobalt',            '钴',      59,    0, 'Co', 'T', 300, NULL, 'EUR', NULL);
-insert into public.chemical values(14, 'Terepthalic acid(TA)',  '对苯二甲酸',166,   0, 'p-C6H4(COOH)2', 'T', 800, NULL, 'EUR', NULL);
-insert into public.chemical values(15, 'Nitrogen',  '液氮', 28,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL);
+insert into public.chemical values(1, 'Ethylene', '乙烯', 28, 1.26,'C2H4','T', 593, 0, 'EUR', 1530, null);
+insert into public.chemical values(2, 'Oxygen', '氧', 32, 1.4,'O2','T', 200, 0, 'EUR', 900,null);
+insert into public.chemical values(3, 'Ethylene oxide', '环氧乙烷', 44, 0,'C2H4O','T', 800, 0, 'EUR', NULL, 'C2');
+insert into public.chemical values(4, 'carbon dioxide', '二氧化碳', 44, 0,'CO2','T', 40, 0, 'EUR', NULL, null);
+insert into public.chemical values(5, 'water', '水', 18, 1,'H2O','T', 56, 0, 'EUR', NULL,null);  -- byproducts
+insert into public.chemical values(6, 'Ammonia', '氨', 18, 0,'NH3','T', 100, 0, 'EUR', NULL,null);
+insert into public.chemical values(7, 'Ethanolamines(MEA)', '单乙醇胺', 61, 0,'NH2CH2CH2OH','T', 1000, 0, 'EUR', NULL,null);
+insert into public.chemical values(8, 'Di-Triethaolamines', '二-三乙醇胺', 115, 0,'DEA,TEA','T', 500, 0, 'EUR', NULL,null);
+insert into public.chemical values(9, 'p-xylene(PX)',       '对二甲苯', 106, 1.26, 'C8H10', 'T',593,0,'EUR',1530,null);
+insert into public.chemical values(10, 'air',               '空气',    28.84, 1.4, '',        'T', 0, 0, 'EUR', 900,null);
+insert into public.chemical values(11, 'Acetic acid',       '乙酸',    60,    0, 'CH3COOH', 'T', 300, 0, 'EUR', NULL,null);
+insert into public.chemical values(12, 'normal water',      '普通水',   18,    0, 'H2O', 'T', 15, NULL, 'EUR', NULL,null); -- as catalyst
+insert into public.chemical values(13, 'Cobalt',            '钴',      59,    0, 'Co', 'T', 300, NULL, 'EUR', NULL,null);
+insert into public.chemical values(14, 'Terepthalic acid(TA)',  '对苯二甲酸',166,   0, 'p-C6H4(COOH)2', 'T', 800, NULL, 'EUR', NULL, 'p-xylene');
+insert into public.chemical values(15, 'Nitrogen',  '液氮', 28,   0, 'LN2', 'T', 200, NULL, 'EUR', NULL,null);
+insert into public.chemical values(16, 'Adipic Acid',  '己二酸', 146,  1360, '(CH2)4(COOH)2', 'T', 2530, NULL, 'EUR', NULL, 'benzene');
+insert into public.chemical values(17, 'Aniline',  '苯胺(阿尼林油)', 93,  0, 'C6H5NH2', 'T', 2280, NULL, 'EUR', NULL, 'benzene');
+insert into public.chemical values(18, 'Phenol',   '苯酚', 94,  1070, 'C6H5OH', 'T', 1820, NULL, 'EUR', NULL, 'benzene');
+insert into public.chemical values(19, 'ethylene glycol(MEG)', '乙二醇', 62,  1113.2, '(CH2OH)2', 'T', 1090, NULL, 'EUR', NULL, 'C2');
+insert into public.chemical values(20, 'Propylene oxide', '环氧丙烷', 58,  830, 'CH3CHCH2O', 'T', 710, NULL, 'EUR', NULL, 'C3');
+insert into public.chemical values(21, 'Propylene glycol', '1,2-丙二醇', 76,  1036, 'C3H8O2', 'T', 1690, NULL, 'EUR', NULL, 'C3');
+insert into public.chemical values(22, 'Propylene', '丙烯', 42,  1.81, 'C3H6', 'T', 510, NULL, 'EUR', NULL, 'C3');
+insert into public.chemical values(23, 'Iso-Butylene', '异丁烯', 56,  587.9, 'C4H8', 'T', 510, NULL, 'EUR', NULL, 'C4');
+insert into public.chemical values(24, 'Butadiene', '丁二烯', 54,  640, 'C4H6', 'T', 1290, NULL, 'EUR', NULL, 'C4');
+insert into public.chemical values(25, 'Formaldehyde', '甲醛', 30,  815.3, 'CH2O', 'T', 320, NULL, 'EUR', NULL, 'C1');
+
 
 -- public.reaction_formula
 insert into public.reaction_formula values(1, '环氧乙烷(EO)', 200, 20, '(-106.7-1327*(1/c-1))',NULL, 0.86); -- attention: do not divide by 3600, which is conversion from kJ to kWh
@@ -97,10 +108,13 @@ insert into gaolanport.factory_reaction_utility values(4,3,5,null,null,null);
 
 -- gaolanport.factory (via QGIS)
 insert into gaolanport.factory values(1, '钰海电力', 'infrastructure', '');
-insert into gaolanport.factory values(2, 'factory 2', 'petrochemical', '');
+insert into gaolanport.factory values(2, 'factory 2', '石化企业', '');
 insert into gaolanport.factory values(3, '水质净化厂', 'infrastructure', '');
-insert into gaolanport.factory values(4, 'BP petrochem', 'infrastructure', '');
+insert into gaolanport.factory values(4, 'BP petrochem', '石化企业', '');
 insert into gaolanport.factory values(5, '中海油工业气体（珠海）有限公司', 'chain', '');
+insert into gaolanport.factory values(12, '中冠石化', '石化企业', '');
+insert into gaolanport.factory values(13, '长成化工', 'chain', '');
+insert into gaolanport.factory values(14, '宝塔石化', '石化企业', '');
 
 -- change column type
 -- alter table public.reaction_reactant alter column quantity type text using cast(quantity as text);
